@@ -4,9 +4,10 @@ import { useStore, buzz, startOfDay, fmtMoney, uid, monthKey, type Cat } from '.
 import { SwipeRow, useHold, Sheet, Switch } from '../lib/ui'
 import { Icon, Badge, PICK_ICONS, PALETTE } from '../lib/icons'
 
-const MAX = 99999
-const tierOf = (n: number) => (n >= 10000 ? 3 : n >= 5000 ? 2 : n >= 1000 ? 1 : 0)
-const TIER_MSG = ['', 'Heavy one.', 'Whoa — that one hurt.', 'Legendary spend. Breathe.']
+const MAX = 999999
+const tierOf = (n: number) => (n >= 100000 ? 5 : n >= 50000 ? 4 : n >= 10000 ? 3 : n >= 5000 ? 2 : n >= 1000 ? 1 : 0)
+const TIER_MSG = ['', 'THOUSAND CLUB', 'BIG SPENDER', 'WALLET ON FIRE', 'CALL THE BANK', 'LAKH! WALLET DOWN']
+const TIER_FLASH = ['', '#ffd16655', '#ff9a3d66', '#ff5a1f88', '#ff2a1faa', '#ffffffcc']
 const DIG = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
 const money = (n: number, cur: string) => (n < 0 ? '−' : '') + cur + Math.abs(Math.round(n)).toLocaleString('en-IN')
 
@@ -25,6 +26,36 @@ function Burst({ tier }: { tier: number }) {
           <Icon name={i % 3 === 0 ? 'spark' : 'coin'} size={22} />
         </motion.div>
       ))}
+    </div>
+  )
+}
+
+/* Coins pouring over the whole screen + a colour flash for the big tiers. */
+function Rain({ tier }: { tier: number }) {
+  const parts = useMemo(() => Array.from({ length: tier * 14 }, () => ({ x: Math.random() * 100, d: Math.random() * 1.1, s: 0.8 + Math.random() * 0.9, r: (Math.random() - 0.5) * 720 })), [tier])
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 60, overflow: 'hidden' }}>
+      <motion.div initial={{ opacity: 0.85 }} animate={{ opacity: 0 }} transition={{ duration: 0.6 }} style={{ position: 'absolute', inset: 0, background: TIER_FLASH[tier] }} />
+      {tier >= 3 && parts.map((p, i) => (
+        <motion.div key={i} initial={{ y: -40, rotate: 0 }} animate={{ y: '108vh', rotate: p.r }} transition={{ duration: 1.3 + p.s, delay: p.d, ease: 'easeIn' }} style={{ position: 'absolute', left: p.x + '%', color: '#ffd34d' }}>
+          <Icon name="coin" size={22 * p.s} />
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+/* Plain phone keypad. */
+function Keypad({ onDigit, onDouble, onBack }: { onDigit: (d: number) => void; onDouble: () => void; onBack: () => void }) {
+  const key = (label: React.ReactNode, fn: () => void, k: string) => (
+    <motion.button key={k} className="pad-key" whileTap={{ scale: 0.9, backgroundColor: 'rgba(255,255,255,.14)' }} onClick={() => { buzz(5); fn() }} aria-label={typeof label === 'string' ? label : 'Delete'}>{label}</motion.button>
+  )
+  return (
+    <div className="pad">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => key(d, () => onDigit(d), 'd' + d))}
+      {key('00', onDouble, 'dd')}
+      {key(0, () => onDigit(0), 'd0')}
+      {key(<Icon name="backspace" size={26} />, onBack, 'bk')}
     </div>
   )
 }
@@ -262,26 +293,31 @@ export default function Spend() {
   const [amt, setAmt] = useState(0)
   const [cat, setCat] = useState(cats[0]?.id ?? '')
   const [note, setNote] = useState('')
+  const [step, setStep] = useState<1 | 2>(1)
   const [typing, setTyping] = useState(false)
   const [dtext, setDtext] = useState('')
   const [date, setDate] = useState('') // yyyy-mm-dd, '' = today
   const [edit, setEdit] = useState<Cat | 'new' | null>(null)
   const [limitOpen, setLimitOpen] = useState(false)
   const [banner, setBanner] = useState<{ k: number; t: number } | null>(null)
+  const [rain, setRain] = useState<{ k: number; t: number } | null>(null)
   const [toast, setToast] = useState<{ k: number; cat: string; amt: number; leftToday: number; left: number; perDay: number } | null>(null)
   const shake = useAnimationControls()
   const tier = tierOf(amt)
   const prev = useRef(0)
   const catOf = (id: string) => cats.find((c) => c.id === id) ?? { id, name: 'Other', icon: 'spark', color: '#999', personal: false }
 
+  const bigShow = (t: number) => {
+    buzz(t >= 3 ? [30, 40, 60, 40, 120, 40, 200] : [30, 40, 70])
+    const k = 6 + t * 5
+    shake.start({ x: [0, -k, k, -k * .8, k * .8, -k * .4, k * .4, 0], rotate: t >= 4 ? [0, -1.2, 1.2, -.8, .8, 0] : 0, transition: { duration: 0.5 + t * 0.08 } })
+    setBanner({ k: Date.now(), t }); setTimeout(() => setBanner((b) => (b && b.t === t ? null : b)), 2000)
+    setRain({ k: Date.now(), t }); setTimeout(() => setRain(null), 4200)
+  }
   useEffect(() => {
     if (tier > prev.current) {
-      buzz([30, 40, 60, 40, 90 + tier * 30])
-      shake.start({ x: [0, -12, 12, -9, 9, -5, 5, 0], transition: { duration: 0.5 } })
-      setBanner({ k: Date.now(), t: tier })
-      const id = setTimeout(() => setBanner(null), 2000)
+      bigShow(tier)
       prev.current = tier
-      return () => clearTimeout(id)
     }
     prev.current = tier
   }, [tier])
@@ -310,9 +346,12 @@ export default function Spend() {
       const s = budgetStats(spentMonth + amt, spentToday + (isToday ? amt : 0), limit, daysLeft)
       setToast({ k: Date.now(), cat: c.name, amt, leftToday: s.leftToday, left: s.left, perDay: s.perDay })
     }
-    buzz([14, 30, 14]); setAmt(0); setNote(''); setDate(''); setDtext(''); setTyping(false)
+    if (tierOf(amt) >= 1) bigShow(tierOf(amt)); else buzz([14, 30, 14])
+    setAmt(0); setNote(''); setDate(''); setDtext(''); setTyping(false); setStep(1); prev.current = 0
   }
   const commitRef = useRef(commit); commitRef.current = commit
+  const stepRef = useRef(step); stepRef.current = step
+  const amtRef = useRef(amt); amtRef.current = amt
   const addDigit = (d: number) => setAmt((a) => (a * 10 + d <= MAX ? a * 10 + d : a))
 
   // desktop: type digits straight away
@@ -320,9 +359,10 @@ export default function Spend() {
     const k = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || e.metaKey || e.ctrlKey) return
-      if (/^\d$/.test(e.key)) addDigit(+e.key)
-      else if (e.key === 'Backspace') setAmt((a) => Math.floor(a / 10))
-      else if (e.key === 'Enter') commitRef.current()
+      const st = stepRef.current
+      if (st === 2 && /^\d$/.test(e.key)) addDigit(+e.key)
+      else if (st === 2 && e.key === 'Backspace') setAmt((a) => Math.floor(a / 10))
+      else if (e.key === 'Enter') { if (st === 2) commitRef.current(); else setStep(2) }
     }
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
   }, [])
@@ -341,72 +381,77 @@ export default function Spend() {
   }), [expenses, day0])
   const max = Math.max(1, ...week.map((w) => w.v))
   const selected = catOf(cat)
+  // both steps share one grid cell so the card keeps the same height on either step
+  const sb = (n: number): React.CSSProperties => ({ gridArea: '1 / 1', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0, visibility: step === n ? 'visible' : 'hidden', pointerEvents: step === n ? 'auto' : 'none' })
   const amtStr = amt.toLocaleString('en-IN')
-  const amtSize = amtStr.length <= 3 ? 44 : amtStr.length <= 5 ? 32 : 26
+  const amtSize = amtStr.length <= 3 ? 52 : amtStr.length <= 6 ? 40 : 32
 
   return (
     <div className="page wide" style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(min(310px, 100%), 1fr))', alignItems: 'start' }}>
       <BudgetCard limit={limit} spentMonth={spentMonth} spentToday={spentToday} daysLeft={daysLeft} hasPersonal={personalIds.size > 0} currency={currency} onEdit={() => setLimitOpen(true)} />
 
-      <motion.div className="card" animate={shake} style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        <div>
-          <div className="eyebrow" style={{ marginBottom: 6 }}>What was it? <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>· hold to edit</span></div>
-          <div className="cats">
-            {cats.map((c) => <CatTile key={c.id} cat={c} on={c.id === cat} onPick={() => setCat(c.id)} onEdit={() => setEdit(c)} />)}
-            <button className="tile add" onClick={() => setEdit('new')}><span className="dash"><Icon name="plus" /></span><span className="n">New</span></button>
+      <motion.div className="card" animate={shake} style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)', alignContent: 'start' }}>
+        <div className="stepdots">{[1, 2].map((i) => <i key={i} className={i === step ? 'on' : ''} />)}</div>
+        {rain && <Rain key={rain.k} tier={rain.t} />}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        <div style={sb(1)} aria-hidden={step !== 1}>
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>What was it? <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>· hold to edit</span></div>
+            <div className="cats">
+              {cats.map((c) => <CatTile key={c.id} cat={c} on={c.id === cat} onPick={() => setCat(c.id)} onEdit={() => setEdit(c)} />)}
+              <button className="tile add" onClick={() => setEdit('new')}><span className="dash"><Icon name="plus" /></span><span className="n">New</span></button>
+            </div>
           </div>
+          <input className="field" placeholder={`Note for ${selected.name} (optional)`} value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setStep(2)} />
+          <div className="chips" style={{ padding: 0 }}>
+            <button className={`chip${!date || date === todayStr ? ' on' : ''}`} onClick={() => { setDate(''); setDtext(''); setTyping(false) }}>Today</button>
+            <button className={`chip${date === yest ? ' on' : ''}`} onClick={() => { setDate(yest); setDtext(''); setTyping(false) }}>Yesterday</button>
+            <button className={`chip${pickedLabel || typing ? ' on' : ''}`} onClick={() => setTyping((v) => !v)}>
+              <Icon name="timer" size={14} /> {pickedLabel || 'Type date'}
+            </button>
+          </div>
+          {typing && (
+            <div className="row" style={{ gap: 8 }}>
+              <input className="field" autoFocus inputMode="numeric" placeholder="DD/MM/YYYY" value={dtext} style={{ flex: 1 }}
+                onChange={(e) => {
+                  const d = e.target.value.replace(/\D/g, '').slice(0, 8)
+                  const txt = d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d
+                  setDtext(txt)
+                  const dd = +d.slice(0, 2), mm = +d.slice(2, 4), yy = d.length === 8 ? +d.slice(4) : d.length === 4 ? new Date().getFullYear() : 0
+                  const dt = new Date(yy, mm - 1, dd)
+                  if (yy && dt.getDate() === dd && dt.getMonth() === mm - 1 && dt.getTime() <= Date.now()) setDate(ymd(dt) === todayStr ? '' : ymd(dt))
+                  else setDate('')
+                }} />
+              <span className="hint" style={{ whiteSpace: 'nowrap' }}>{dtext && !date ? 'invalid date' : 'DD/MM = this year'}</span>
+            </div>
+          )}
+          <button className="btn" style={{ marginTop: 'auto' }} onClick={() => { buzz(8); setStep(2) }}>Next → amount</button>
         </div>
 
-        <div>
-          <div className="amtrow">
-            <div className="amtnum" style={{ fontSize: amtSize, color: tier ? '#ff4d4d' : 'var(--ink)', textShadow: tier ? '0 0 18px rgba(255,77,77,.6)' : undefined }}>
-              <span style={{ color: tier ? '#ff4d4d' : 'var(--a)', fontSize: '.65em', marginRight: 3 }}>{currency}</span>{amtStr}
+        <div style={sb(2)} aria-hidden={step !== 2}>
+          <button className="notepill" onClick={() => setStep(1)}><Badge icon={selected.icon} color={selected.color} size={22} /> <span>{note.trim() || selected.name}</span> <b>edit</b></button>
+          <div className="amtrow" style={{ position: 'relative' }}>
+            <div className={`amtnum${tier ? ' t' + tier : ''}`} style={{ fontSize: amtSize }}>
+              <span className="cur">{currency}</span>{amtStr}
             </div>
             <div className="amtbtns">
-              <button aria-label="Delete last digit" onClick={() => { buzz(6); setAmt((a) => Math.floor(a / 10)) }}><Icon name="backspace" size={18} /></button>
-              <button onClick={() => { buzz(6); setAmt((a) => Math.min(MAX, a * 100)) }}>00</button>
               <button onClick={() => { buzz(6); setAmt((a) => Math.min(MAX, a * 1000)) }}>000</button>
               <button aria-label="Clear" onClick={() => { buzz(6); setAmt(0) }}>C</button>
             </div>
-          </div>
-          <div style={{ position: 'relative', maxWidth: 300, margin: '8px auto 0' }}>
             <AnimatePresence>
               {banner && (
-                <motion.div key={banner.k} className="banner" initial={{ y: 12, opacity: 0, scale: 0.7 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -10, opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}>
+                <motion.div key={banner.k} className="banner" style={{ x: '-50%', top: -36 }} initial={{ y: 12, opacity: 0, scale: 0.5 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -14, opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}>
                   <Icon name="flame" size={16} /> {TIER_MSG[banner.t]}
                 </motion.div>
               )}
             </AnimatePresence>
             {banner && <Burst key={banner.k} tier={banner.t} />}
-            <FlickCircle onDigit={addDigit} />
           </div>
-          <div className="hint" style={{ textAlign: 'center' }}>Press the middle, flick to a digit, let go · desktop: just type, Enter logs</div>
+          <Keypad onDigit={addDigit} onDouble={() => setAmt((a) => Math.min(MAX, a * 100))} onBack={() => setAmt((a) => Math.floor(a / 10))} />
+          <SlideToLog ready={amt > 0} onDone={commit} />
         </div>
-
-        <div className="chips" style={{ padding: 0 }}>
-          <button className={`chip${!date || date === todayStr ? ' on' : ''}`} onClick={() => { setDate(''); setDtext(''); setTyping(false) }}>Today</button>
-          <button className={`chip${date === yest ? ' on' : ''}`} onClick={() => { setDate(yest); setDtext(''); setTyping(false) }}>Yesterday</button>
-          <button className={`chip${pickedLabel || typing ? ' on' : ''}`} onClick={() => setTyping((v) => !v)}>
-            <Icon name="timer" size={14} /> {pickedLabel || 'Type date'}
-          </button>
         </div>
-        {typing && (
-          <div className="row" style={{ gap: 8 }}>
-            <input className="field" autoFocus inputMode="numeric" placeholder="DD/MM/YYYY" value={dtext} style={{ flex: 1 }}
-              onChange={(e) => {
-                const d = e.target.value.replace(/\D/g, '').slice(0, 8)
-                const txt = d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d
-                setDtext(txt)
-                const dd = +d.slice(0, 2), mm = +d.slice(2, 4), yy = d.length === 8 ? +d.slice(4) : d.length === 4 ? new Date().getFullYear() : 0
-                const dt = new Date(yy, mm - 1, dd)
-                if (yy && dt.getDate() === dd && dt.getMonth() === mm - 1 && dt.getTime() <= Date.now()) setDate(ymd(dt) === todayStr ? '' : ymd(dt))
-                else setDate('')
-              }} />
-            <span className="hint" style={{ whiteSpace: 'nowrap' }}>{dtext && !date ? 'invalid date' : 'DD/MM = this year'}</span>
-          </div>
-        )}
-        <input className="field" placeholder={`Note for ${selected.name} (optional)`} value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && commit()} />
-        <SlideToLog ready={amt > 0} onDone={commit} />
       </motion.div>
 
       <div>

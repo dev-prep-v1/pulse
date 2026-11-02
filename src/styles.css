@@ -145,3 +145,26 @@ input, select, textarea { font: inherit; color: inherit; -webkit-user-select: te
 .syncchip.syncing svg { animation: spin 1s linear infinite; }
 .syncchip.error { color: #ff8a7a; border-color: color-mix(in srgb, #ff8a7a 50%, transparent); }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.stepdots { display: flex; gap: 6px; justify-content: center; }
+.stepdots i { width: 26px; height: 5px; border-radius: 9px; background: var(--line); transition: all .3s; }
+.stepdots i.on { width: 40px; background: var(--a); }
+.pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 320px; width: 100%; margin: 0 auto; }
+.pad-key { height: 54px; border-radius: 20px; background: var(--card); border: 1px solid var(--line); font-size: 26px; font-weight: 700; color: var(--ink); display: grid; place-items: center; }
+.notepill { align-self: start; justify-self: start; max-width: 100%; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-weight: 700; font-size: 13px; color: var(--ink); }
+.notepill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notepill b { color: var(--a); font-size: 12px; }
+.sumcard { display: grid; justify-items: center; gap: 6px; padding: 22px 14px; border-radius: 24px; background: rgba(0,0,0,.25); border: 1px solid var(--line); text-align: center; }
+.sumcard .n { font-weight: 800; font-size: 18px; }
+.bignum { font-weight: 900; letter-spacing: -.03em; white-space: nowrap; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.cur { color: var(--a); font-size: .65em; margin-right: 3px; }
+.t1 { color: #ffd166; text-shadow: 0 0 18px #ffb70366; }
+.t2 { color: #ff9a3d; text-shadow: 0 0 24px #ff7a45aa; }
+.t3, .t4, .t5 { background: linear-gradient(90deg,#fff3a0,#ff9d2e,#ff3d2e,#ff9d2e,#fff3a0); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: fire 1s linear infinite, throb .5s ease-in-out infinite alternate; filter: drop-shadow(0 0 14px #ff5a1f); }
+.t4, .t5 { filter: drop-shadow(0 0 22px #ff2a1f) drop-shadow(0 0 40px #ff7a1f); }
+.t5 { animation-duration: .5s, .35s; }
+.t3 .cur, .t4 .cur, .t5 .cur { color: inherit; }
+@keyframes fire { to { background-position: -200% 0; } }
+@keyframes throb { to { transform: scale(1.05); } }
+.amtnum { transform-origin: left center; }
+.sumcard .bignum { transform-origin: center; }

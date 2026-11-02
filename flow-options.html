@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pulse · spend flow options</title>
+<style>
+:root{--bg:#0b0b0f;--card:#17171d;--line:#2a2a33;--ink:#f5f5f7;--mute:#8d8d99;--a:#ff7a45;--on:#1a0f08}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:14px 12px 40px}
+h1{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--a);margin:6px 0 4px}
+.sub{font-size:12px;color:var(--mute);text-align:center;max-width:380px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;width:100%;max-width:400px}
+.tabs button{flex:1;padding:10px 6px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--mute);font-weight:800;font-size:12px;cursor:pointer;line-height:1.25}
+.tabs button.on{background:var(--a);color:var(--on);border-color:transparent}
+.tabs small{display:block;font-weight:600;font-size:10px;opacity:.85}
+#phone{position:relative;width:100%;max-width:400px;min-height:640px;background:var(--card);border:1px solid var(--line);border-radius:34px;padding:18px 18px 22px;overflow:hidden;display:flex;flex-direction:column}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:14px}
+.dots i{width:28px;height:5px;border-radius:9px;background:var(--line);transition:.3s}
+.dots i.on{background:var(--a);width:42px}
+.q{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:6px 2px 14px}
+.field{width:100%;background:#101015;border:1px solid var(--line);border-radius:18px;padding:16px;color:var(--ink);font-size:20px;font-weight:700;outline:none}
+.field:focus{border-color:var(--a)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.chip{padding:9px 14px;border-radius:999px;background:#101015;border:1px solid var(--line);font-weight:700;font-size:13px;color:var(--ink);cursor:pointer}
+.chip:active{transform:scale(.94)}
+.next{margin-top:auto;width:100%;padding:16px;border-radius:20px;border:0;background:var(--a);color:var(--on);font-weight:800;font-size:16px;cursor:pointer}
+.next:disabled{opacity:.35}
+.notepill{align-self:flex-start;max-width:100%;padding:7px 13px;border-radius:999px;background:#101015;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--mute);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amtrow{display:flex;align-items:center;gap:8px;height:64px;margin-top:10px;flex-wrap:nowrap}
+.amt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1;transform-origin:left center}
+.amt.pop{animation:pop .22s ease-out}
+@keyframes pop{0%{transform:scale(1.18)}100%{transform:scale(1)}}
+.ctl{display:flex;gap:4px;flex:none}
+.ctl button{height:36px;min-width:34px;padding:0 7px;border-radius:12px;background:#101015;border:1px solid var(--line);color:var(--ink);font-weight:800;font-size:13px;cursor:pointer}
+.ctl button:active{transform:scale(.92)}
+#widget{display:grid;place-items:center;margin:6px 0 4px;touch-action:none;user-select:none}
+#widget svg{width:100%;max-width:300px;height:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+.hint{font-size:11.5px;color:var(--mute);text-align:center;margin:2px 0 10px}
+.test{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.test button{padding:5px 9px;border-radius:9px;border:1px dashed var(--line);background:transparent;color:var(--mute);font-size:11px;font-weight:700;cursor:pointer}
+/* tiers */
+.t1{color:#ffd166;text-shadow:0 0 18px #ffb70366}
+.t2{color:#ff9a3d;text-shadow:0 0 24px #ff7a45aa}
+.t3,.t4,.t5{background:linear-gradient(90deg,#fff3a0,#ff9d2e,#ff3d2e,#ff9d2e,#fff3a0);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:fire 1s linear infinite;filter:drop-shadow(0 0 14px #ff5a1f)}
+.t4,.t5{filter:drop-shadow(0 0 22px #ff2a1f) drop-shadow(0 0 40px #ff7a1f)}
+.t5{animation:fire .5s linear infinite}
+@keyframes fire{to{background-position:-200% 0}}
+.amt.t3,.amt.t4,.amt.t5{animation:fire 1s linear infinite,throb .5s ease-in-out infinite alternate}
+@keyframes throb{to{transform:scale(1.05)}}
+/* fx */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+.flash{position:fixed;inset:0;pointer-events:none;z-index:49;animation:fl .55s ease-out forwards}
+@keyframes fl{0%{opacity:.85}100%{opacity:0}}
+.shock{position:fixed;width:20px;height:20px;border-radius:50%;border:4px solid #ffb703;pointer-events:none;z-index:48;transform:translate(-50%,-50%);animation:sw .9s ease-out forwards}
+@keyframes sw{to{width:1400px;height:1400px;opacity:0;border-width:1px}}
+.banner{position:absolute;left:50%;top:24%;z-index:20;transform:translate(-50%,-50%);padding:10px 18px;border-radius:16px;background:var(--a);color:var(--on);font-weight:900;letter-spacing:.06em;font-size:15px;white-space:nowrap;animation:ban 1.9s cubic-bezier(.2,1.4,.3,1) forwards;pointer-events:none;box-shadow:0 12px 40px #0008}
+@keyframes ban{0%{transform:translate(-50%,-50%) scale(.2) rotate(-8deg);opacity:0}12%{transform:translate(-50%,-50%) scale(1.2) rotate(3deg);opacity:1}22%{transform:translate(-50%,-50%) scale(1) rotate(-2deg)}80%{opacity:1}100%{transform:translate(-50%,-90%) scale(1);opacity:0}}
+.shake{animation:shk .5s}
+@keyframes shk{10%{transform:translate(-9px,3px)}20%{transform:translate(10px,-4px)}30%{transform:translate(-8px,-3px)}40%{transform:translate(8px,4px)}50%{transform:translate(-5px,2px)}70%{transform:translate(4px,-2px)}100%{transform:none}}
+.shake5{animation:shk5 .9s}
+@keyframes shk5{10%{transform:translate(-16px,6px) rotate(-1deg)}20%{transform:translate(16px,-8px) rotate(1deg)}30%{transform:translate(-14px,-6px)}40%{transform:translate(14px,8px)}50%{transform:translate(-10px,4px)}70%{transform:translate(8px,-4px)}100%{transform:none}}
+/* summary + slide */
+.sum{background:#101015;border:1px solid var(--line);border-radius:24px;padding:22px 18px;text-align:center;margin-top:8px}
+.sum .n{color:var(--mute);font-weight:700;font-size:14px;margin-bottom:6px}
+.sum .big{font-size:56px;font-weight:900;letter-spacing:-.03em;line-height:1.1;white-space:nowrap;overflow:hidden}
+.slide{position:relative;height:64px;border-radius:32px;background:#101015;border:1px solid var(--line);margin-top:auto;overflow:hidden;touch-action:none;user-select:none}
+.slide .lab{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;color:var(--mute);letter-spacing:.04em;pointer-events:none}
+.slide .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#ff7a4500,var(--a));border-radius:32px;opacity:0}
+.slide .knob{position:absolute;left:4px;top:4px;width:54px;height:54px;border-radius:50%;background:var(--a);color:var(--on);display:grid;place-items:center;font-size:22px;font-weight:900;cursor:grab;box-shadow:0 6px 18px #ff7a4566}
+.done{display:grid;place-items:center;text-align:center;flex:1;gap:8px}
+.done .ck{width:92px;height:92px;border-radius:50%;background:var(--a);color:var(--on);display:grid;place-items:center;font-size:48px;font-weight:900;animation:pop .5s}
+.back{background:none;border:0;color:var(--mute);font-weight:700;font-size:13px;cursor:pointer;align-self:flex-start;padding:4px 0;margin-bottom:6px}
+</style>
+</head>
+<body>
+<h1>Pulse · new spend flow</h1>
+<div class="sub">Order: <b>note → amount → swipe</b>. Try each dial below, then tell me the letter. “Preview big amounts” buttons jump straight to the crazy animations.</div>
+<div class="tabs" id="tabs">
+  <button data-o="A" class="on">A · Jog wheel<small>spin, tap centre for ×</small></button>
+  <button data-o="B">B · Lock rings<small>one ring per digit</small></button>
+  <button data-o="C">C · Flick circle<small>flick to digits</small></button>
+</div>
+<div id="phone"><div class="dots" id="dots"></div><div id="body" style="display:flex;flex-direction:column;flex:1"></div></div>
+<canvas id="fx"></canvas>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s)
+const MAX = 999999
+const fmt = n => n.toLocaleString('en-IN')
+const S = { opt: 'A', step: 1, note: '', amt: 0, tier: 0 }
+const TIERS = [[100000, 5, 'LAKH! WALLET DOWN'], [50000, 4, 'CALL THE BANK'], [10000, 3, 'WALLET ON FIRE'], [5000, 2, 'BIG SPENDER'], [1000, 1, 'THOUSAND CLUB']]
+const tierOf = n => (TIERS.find(t => n >= t[0]) || [0, 0, ''])[1]
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p) } catch (e) {} }
+const mod = (a, n) => ((a % n) + n) % n
+
+/* ---------- effects ---------- */
+const cv = $('#fx'), cx = cv.getContext('2d')
+let P = [], raf = 0
+function size() { const d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0) }
+size(); addEventListener('resize', size)
+const COL = ['#ffd166', '#ffb703', '#ff7a45', '#ff3d2e', '#fff3a0']
+function coin(x, y, v, g = 0.35) { P.push({ k: 'c', x, y, vx: (Math.random() - .5) * v, vy: -Math.random() * v * .9 - 3, g, r: 7 + Math.random() * 7, rot: Math.random() * 6, vr: (Math.random() - .5) * .4, life: 90 + Math.random() * 60 }) }
+function spark(x, y, v) { const a = Math.random() * 6.28, s = Math.random() * v; P.push({ k: 's', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.12, r: 2 + Math.random() * 3, c: COL[(Math.random() * COL.length) | 0], life: 40 + Math.random() * 30 }) }
+function loop() {
+  cx.clearRect(0, 0, innerWidth, innerHeight)
+  P = P.filter(p => p.life-- > 0 && p.y < innerHeight + 40)
+  for (const p of P) {
+    p.vy += p.g; p.x += p.vx; p.y += p.vy
+    if (p.k === 'c') {
+      p.rot += p.vr; cx.save(); cx.translate(p.x, p.y); cx.scale(Math.abs(Math.cos(p.rot)) * .8 + .2, 1)
+      cx.fillStyle = '#ffc233'; cx.strokeStyle = '#b97800'; cx.lineWidth = 2
+      cx.beginPath(); cx.arc(0, 0, p.r, 0, 6.28); cx.fill(); cx.stroke()
+      cx.fillStyle = '#b97800'; cx.font = `800 ${p.r}px sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('₹', 0, 1); cx.restore()
+    } else {
+      cx.globalAlpha = Math.min(1, p.life / 25); cx.fillStyle = p.c
+      cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 6.28); cx.fill(); cx.globalAlpha = 1
+    }
+  }
+  raf = P.length ? requestAnimationFrame(loop) : 0
+}
+const kick = () => { if (!raf) raf = requestAnimationFrame(loop) }
+function rain(ms) { const t0 = performance.now(); (function f() { if (performance.now() - t0 > ms) return; for (let i = 0; i < 3; i++) coin(Math.random() * innerWidth, -20, 2, 0.18); kick(); setTimeout(f, 60) })() }
+function fx(tier, where) {
+  const r = (where || $('#amt') || $('#phone')).getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2
+  const ph = $('#phone')
+  ph.classList.remove('shake', 'shake5'); void ph.offsetWidth; ph.classList.add(tier >= 4 ? 'shake5' : 'shake')
+  const fl = document.createElement('div'); fl.className = 'flash'
+  fl.style.background = ['', '#ffd16655', '#ff9a3d66', '#ff5a1f88', '#ff2a1faa', '#ffffffcc'][tier]; document.body.appendChild(fl); setTimeout(() => fl.remove(), 600)
+  for (let i = 0; i < Math.min(tier, 3); i++) setTimeout(() => { const s = document.createElement('div'); s.className = 'shock'; s.style.left = x + 'px'; s.style.top = y + 'px'; s.style.borderColor = COL[i]; document.body.appendChild(s); setTimeout(() => s.remove(), 950) }, i * 140)
+  for (let i = 0; i < 18 + tier * 26; i++) coin(x, y, 8 + tier * 3)
+  for (let i = 0; i < 20 + tier * 30; i++) spark(x, y, 6 + tier * 2.5)
+  if (tier >= 3) rain(tier * 500)
+  const t = TIERS.find(t => t[1] === tier)
+  document.querySelectorAll('.banner').forEach(b => b.remove())
+  const b = document.createElement('div'); b.className = 'banner'; b.textContent = t[2]; ph.appendChild(b); setTimeout(() => b.remove(), 2000)
+  buzz(tier >= 3 ? [30, 40, 60, 40, 120, 40, 200] : [30, 40, 70]); kick()
+}
+
+/* ---------- state ---------- */
+function amtSize(n) { const l = fmt(n).length; return l <= 3 ? 58 : l <= 5 ? 46 : l <= 7 ? 36 : 28 }
+function setAmt(v, fromWidget) {
+  v = Math.max(0, Math.min(MAX, v | 0)); const changed = v !== S.amt; S.amt = v
+  const el = $('#amt'); if (!el) return
+  el.textContent = fmt(v); el.style.fontSize = amtSize(v) + 'px'
+  const t = tierOf(v); el.className = 'amt' + (t ? ' t' + t : '')
+  if (changed) { void el.offsetWidth; el.classList.add('pop') }
+  if (t > S.tier) fx(t)
+  S.tier = t
+  if (!fromWidget && W && W.sync) W.sync(v)
+  const go = $('#go'); if (go) go.disabled = !v
+}
+let W = null
+
+/* ---------- widgets ---------- */
+const NS = 'http://www.w3.org/2000/svg'
+const svgEl = (n, a = {}, p) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); p && p.appendChild(e); return e }
+const angleOf = (svg, e) => { const r = svg.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); return { a: Math.atan2(dx, -dy) * 180 / Math.PI, d: Math.hypot(dx, dy) * 300 / r.width } }
+
+/* A · jog wheel */
+function jog(host) {
+  const steps = [1, 10, 100, 1000]; let si = 0, rot = 0, acc = 0, last = null
+  const s = svgEl('svg', { viewBox: '0 0 300 300' }, host)
+  svgEl('circle', { cx: 150, cy: 150, r: 142, fill: '#101015', stroke: '#2a2a33', 'stroke-width': 2 }, s)
+  const g = svgEl('g', { style: 'transform-origin:150px 150px' }, s)
+  for (let i = 0; i < 48; i++) { const big = i % 4 === 0, a = i * 7.5 * Math.PI / 180, r1 = big ? 112 : 120, r2 = 134
+    svgEl('line', { x1: 150 + Math.sin(a) * r1, y1: 150 - Math.cos(a) * r1, x2: 150 + Math.sin(a) * r2, y2: 150 - Math.cos(a) * r2, stroke: big ? '#ff7a45' : '#444452', 'stroke-width': big ? 3 : 2, 'stroke-linecap': 'round' }, g) }
+  svgEl('path', { d: 'M150 2 l-9 -0 l9 16 l9 -16z', fill: '#ff7a45', transform: 'translate(0,4)' }, s)
+  const cb = svgEl('circle', { cx: 150, cy: 150, r: 66, fill: '#17171d', stroke: '#ff7a45', 'stroke-width': 3, style: 'cursor:pointer' }, s)
+  const t1 = svgEl('text', { x: 150, y: 152, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#fff', 'font-size': 38, 'font-weight': 900 }, s)
+  const t2 = svgEl('text', { x: 150, y: 184, 'text-anchor': 'middle', fill: '#8d8d99', 'font-size': 11, 'font-weight': 700 }, s)
+  const lab = () => { t1.textContent = '×' + fmt(steps[si]); t2.textContent = 'tap to change' }; lab()
+  s.addEventListener('pointerdown', e => { s.setPointerCapture && s.setPointerCapture(e.pointerId); const p = angleOf(s, e); if (p.d < 66) { si = (si + 1) % 4; lab(); buzz(8); last = 'tap'; return } last = p.a; acc = 0 })
+  s.addEventListener('pointermove', e => {
+    if (last === null || last === 'tap') return
+    const p = angleOf(s, e); let d = p.a - last; if (d > 180) d -= 360; if (d < -180) d += 360; last = p.a
+    rot += d; g.style.transform = `rotate(${rot}deg)`; acc += d
+    while (acc >= 15) { acc -= 15; setAmt(S.amt + steps[si], true); buzz(4) }
+    while (acc <= -15) { acc += 15; setAmt(S.amt - steps[si], true); buzz(4) }
+  })
+  const up = () => { last = null }; s.addEventListener('pointerup', up); s.addEventListener('pointercancel', up)
+  return { ctl: ['C', '⌫'], hint: 'Spin clockwise to add, back to subtract · tap the centre for ×1 ×10 ×100 ×1000 (37 = ×10 three clicks, ×1 seven)' }
+}
+
+/* B · lock rings */
+function rings(host) {
+  const R = [140, 116, 92, 68, 44], EXP = [4, 3, 2, 1, 0], NAME = ['10k', '1k', '100', '10', '1']
+  const rot = R.map(() => 0), dig = R.map(() => 0); let act = -1, last = 0
+  const s = svgEl('svg', { viewBox: '0 0 300 300' }, host)
+  const gs = R.map((r, i) => {
+    svgEl('circle', { cx: 150, cy: 150, r, fill: 'none', stroke: i % 2 ? '#1b1b22' : '#14141a', 'stroke-width': 23 }, s)
+    svgEl('circle', { cx: 150, cy: 150, r, fill: 'none', stroke: '#2a2a33', 'stroke-width': 1, 'stroke-dasharray': '2 5' }, s)
+    const g = svgEl('g', { style: 'transform-origin:150px 150px;transition:transform .25s cubic-bezier(.2,1.3,.3,1)' }, s)
+    for (let k = 0; k < 10; k++) { const a = k * 36 * Math.PI / 180
+      const t = svgEl('text', { x: 150 + Math.sin(a) * r, y: 150 - Math.cos(a) * r, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#d8d8e0', 'font-size': 13, 'font-weight': 800, transform: `rotate(${k * 36} ${150 + Math.sin(a) * r} ${150 - Math.cos(a) * r})` }, g); t.textContent = k }
+    return g
+  })
+  svgEl('rect', { x: 134, y: 150 - 140 - 14, width: 32, height: 140 - 30 + 28 + 2, rx: 14, fill: 'none', stroke: '#ff7a45', 'stroke-width': 3 }, s)
+  R.forEach((r, i) => { const t = svgEl('text', { x: 172, y: 150 - r + 3, fill: '#8d8d99', 'font-size': 8, 'font-weight': 700 }, s); t.textContent = NAME[i] })
+  svgEl('circle', { cx: 150, cy: 150, r: 28, fill: '#17171d', stroke: '#ff7a45', 'stroke-width': 3 }, s)
+  const c = svgEl('text', { x: 150, y: 151, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#fff', 'font-size': 22, 'font-weight': 900 }, s); c.textContent = '₹'
+  const draw = (i, anim) => { gs[i].style.transition = anim ? 'transform .25s cubic-bezier(.2,1.3,.3,1)' : 'none'; gs[i].style.transform = `rotate(${rot[i]}deg)` }
+  const total = () => dig.reduce((a, d, i) => a + d * Math.pow(10, EXP[i]), 0)
+  s.addEventListener('pointerdown', e => { s.setPointerCapture && s.setPointerCapture(e.pointerId); const p = angleOf(s, e)
+    act = R.findIndex(r => Math.abs(p.d - r) <= 12); if (act < 0) return; last = p.a; c.textContent = NAME[act] })
+  s.addEventListener('pointermove', e => {
+    if (act < 0) return; const p = angleOf(s, e); let d = p.a - last; if (d > 180) d -= 360; if (d < -180) d += 360; last = p.a
+    rot[act] += d; draw(act, false)
+    const nd = mod(Math.round(-rot[act] / 36), 10); if (nd !== dig[act]) { dig[act] = nd; buzz(5); setAmt(total(), true) }
+  })
+  const up = () => { if (act < 0) return; rot[act] = Math.round(rot[act] / 36) * 36; draw(act, true); act = -1; c.textContent = '₹' }
+  s.addEventListener('pointerup', up); s.addEventListener('pointercancel', up)
+  return { ctl: ['C'], hint: 'Drag any ring to the digit you want under the glowing slot · 37 = turn the “10” ring to 3, the “1” ring to 7',
+    sync(v) { const str = String(Math.min(v, 99999)).padStart(5, '0'); R.forEach((_, i) => { dig[i] = +str[i]; rot[i] = -dig[i] * 36; draw(i, true) }) } }
+}
+
+/* C · flick circle */
+function flick(host) {
+  const DIG = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0], s = svgEl('svg', { viewBox: '-150 -150 300 300' }, host)
+  svgEl('circle', { r: 142, fill: '#101015', stroke: '#2a2a33', 'stroke-width': 2 }, s)
+  const wedges = DIG.map((d, i) => { const a = i * 36 * Math.PI / 180, x = Math.sin(a) * 108, y = -Math.cos(a) * 108
+    const c = svgEl('circle', { cx: x, cy: y, r: 24, fill: '#17171d', stroke: '#2a2a33', 'stroke-width': 1.5 }, s)
+    const t = svgEl('text', { x, y: y + 1, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#fff', 'font-size': 23, 'font-weight': 800, style: 'pointer-events:none' }, s); t.textContent = d; return c })
+  const puck = svgEl('g', { style: 'transition:transform .18s' }, s)
+  svgEl('circle', { r: 38, fill: '#ff7a45' }, puck)
+  const pt = svgEl('text', { y: 2, 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: '#1a0f08', 'font-size': 30, 'font-weight': 900 }, puck); pt.textContent = '●'
+  let drag = false, sel = -1
+  const idxOf = a => mod(Math.round(a / 36), 10)
+  const hi = i => wedges.forEach((w, k) => { w.setAttribute('fill', k === i ? '#ff7a45' : '#17171d') })
+  s.addEventListener('pointerdown', e => { s.setPointerCapture && s.setPointerCapture(e.pointerId); const p = angleOf(s, e)
+    if (p.d < 46) { drag = true; puck.style.transition = 'none' } else if (p.d > 70) { const i = idxOf(mod(p.a, 360)); setAmt(S.amt * 10 + DIG[i], true); hi(i); setTimeout(() => hi(-1), 140); buzz(8) } })
+  s.addEventListener('pointermove', e => { if (!drag) return; const r = s.getBoundingClientRect(), k = 300 / r.width
+    let dx = (e.clientX - (r.left + r.width / 2)) * k, dy = (e.clientY - (r.top + r.height / 2)) * k; const d = Math.hypot(dx, dy), m = Math.min(d, 78)
+    if (d) { puck.style.transform = `translate(${dx / d * m}px,${dy / d * m}px)` }
+    const ns = d >= 46 ? idxOf(mod(Math.atan2(dx, -dy) * 180 / Math.PI, 360)) : -1
+    if (ns !== sel) { sel = ns; hi(sel); pt.textContent = sel >= 0 ? DIG[sel] : '●'; if (sel >= 0) buzz(5) } })
+  const up = () => { if (!drag) return; drag = false; puck.style.transition = 'transform .18s'; puck.style.transform = 'translate(0,0)'
+    if (sel >= 0) { setAmt(S.amt * 10 + DIG[sel], true); buzz(10) } sel = -1; hi(-1); pt.textContent = '●' }
+  s.addEventListener('pointerup', up); s.addEventListener('pointercancel', up)
+  return { ctl: ['C', '⌫', '00', '000'], hint: 'Press the middle, flick to a digit, let go · or just tap a digit' }
+}
+const WIDGETS = { A: jog, B: rings, C: flick }
+
+/* ---------- screens ---------- */
+const CH = ['Coffee', 'Lunch', 'Auto', 'Groceries', 'Recharge', 'Snacks', 'Dinner', 'Fuel']
+function dots() { $('#dots').innerHTML = [1, 2, 3].map(i => `<i class="${i === S.step ? 'on' : ''}"></i>`).join('') }
+function render() {
+  dots(); const b = $('#body'); W = null; S.tier = tierOf(S.amt)
+  if (S.step === 1) {
+    b.innerHTML = `<div class="q">What was it for?</div>
+      <input class="field" id="note" placeholder="e.g. Chai with Rahul" maxlength="60" value="${S.note.replace(/"/g, '&quot;')}">
+      <div class="chips">${CH.map(c => `<button class="chip">${c}</button>`).join('')}</div>
+      <button class="next" id="go">Next → amount</button>`
+    const n = $('#note'); b.querySelectorAll('.chip').forEach(c => c.onclick = () => { n.value = c.textContent; n.focus() })
+    const go = () => { S.note = n.value.trim(); S.step = 2; render() }
+    $('#go').onclick = go; n.onkeydown = e => e.key === 'Enter' && go()
+  } else if (S.step === 2) {
+    b.innerHTML = `<button class="notepill" id="np">${S.note ? S.note.replace(/</g, '&lt;') : 'No note'} · edit</button>
+      <div class="amtrow"><div class="amt" id="amt">0</div><div class="ctl" id="ctl"></div></div>
+      <div id="widget"></div><div class="hint" id="hint"></div>
+      <div class="test">preview big amounts: ${[1000, 5000, 10000, 50000, 100000].map(v => `<button data-v="${v}">${fmt(v)}</button>`).join('')}</div>
+      <button class="next" id="go" disabled>Next → swipe to log</button>`
+    $('#np').onclick = () => { S.step = 1; render() }
+    W = WIDGETS[S.opt]($('#widget')); $('#hint').textContent = W.hint
+    const act = { 'C': () => setAmt(0), '⌫': () => setAmt(Math.floor(S.amt / 10)), '00': () => setAmt(S.amt * 100), '000': () => setAmt(S.amt * 1000) }
+    $('#ctl').innerHTML = W.ctl.map(k => `<button>${k}</button>`).join('')
+    $('#ctl').querySelectorAll('button').forEach(bt => bt.onclick = () => { buzz(6); act[bt.textContent]() })
+    b.querySelectorAll('.test button').forEach(bt => bt.onclick = () => { S.tier = 0; setAmt(+bt.dataset.v) })
+    const v = S.amt; S.amt = -1; S.tier = 99; setAmt(v); S.tier = tierOf(v)
+    $('#go').onclick = () => { S.step = 3; render() }
+  } else {
+    const t = tierOf(S.amt)
+    b.innerHTML = `<button class="back" id="bk">← change amount</button><div class="q">Slide to log</div>
+      <div class="sum"><div class="n">${S.note ? S.note.replace(/</g, '&lt;') : 'Expense'}</div><div class="big ${t ? 't' + t : ''}" id="big">₹${fmt(S.amt)}</div></div>
+      <div class="slide" id="sl"><div class="fill"></div><div class="lab">SLIDE TO LOG  →</div><div class="knob">→</div></div>`
+    $('#bk').onclick = () => { S.step = 2; render() }
+    $('#big').style.fontSize = (amtSize(S.amt) + 4) + 'px'
+    slide($('#sl'))
+  }
+}
+function slide(tr) {
+  const k = $('.knob', tr), f = $('.fill', tr); let x0 = null, x = 0, done = false
+  const max = () => tr.clientWidth - 62
+  k.addEventListener('pointerdown', e => { if (done) return; k.setPointerCapture(e.pointerId); x0 = e.clientX - x; k.style.transition = 'none' })
+  k.addEventListener('pointermove', e => { if (x0 === null) return; x = Math.max(0, Math.min(max(), e.clientX - x0)); k.style.transform = `translateX(${x}px)`; f.style.opacity = x > 8 ? 1 : 0; f.style.width = x + 30 + 'px' })
+  const end = () => { if (x0 === null) return; x0 = null
+    if (x > max() * .88) { done = true; k.style.transform = `translateX(${max()}px)`; logged() }
+    else { k.style.transition = 'transform .3s cubic-bezier(.2,1.4,.3,1)'; x = 0; k.style.transform = ''; f.style.opacity = 0; f.style.width = 0 } }
+  k.addEventListener('pointerup', end); k.addEventListener('pointercancel', end)
+}
+function logged() {
+  const t = Math.max(1, tierOf(S.amt)), b = $('#body')
+  b.innerHTML = `<div class="done"><div class="ck">✓</div><div class="q" style="margin:6px 0 0">Logged</div>
+    <div style="color:var(--mute);font-weight:700">${S.note || 'Expense'} · ₹${fmt(S.amt)}</div></div>
+    <button class="next" id="again" style="margin-top:12px">Add another</button>`
+  const ck = $('.ck'); if (S.amt >= 1000) fx(t, ck); else { for (let i = 0; i < 40; i++) coin(innerWidth / 2, innerHeight / 2, 9); kick(); buzz([14, 30, 14]) }
+  $('#again').onclick = () => { S.note = ''; S.amt = 0; S.tier = 0; S.step = 1; render() }
+}
+$('#tabs').addEventListener('click', e => { const bt = e.target.closest('button'); if (!bt) return
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === bt)); S.opt = bt.dataset.o
+  if (S.step === 3) S.step = 2; render() })
+render()
+</script>
+</body>
+</html>
