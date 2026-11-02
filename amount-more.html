@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>More amount options</title>
+<style>
+  :root { --a: #ff7a45; --hot: #ff4d4d; --line: rgba(255,255,255,.14); --card: rgba(255,255,255,.06); --mute: rgba(255,255,255,.55); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: radial-gradient(120% 60% at 80% -10%, #4a1d0f, #140a07 60%) #140a07; color: #fff; font-family: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif; -webkit-user-select: none; user-select: none; padding: 20px 16px 80px; }
+  h1 { font-size: 22px; margin: 6px 0 4px; } .lead { color: var(--mute); font-size: 14px; line-height: 1.5; margin: 0 0 22px; max-width: 600px; }
+  .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+  .opt { background: var(--card); border: 1px solid var(--line); border-radius: 26px; padding: 16px; min-width: 0; }
+  .head { display: flex; gap: 12px; align-items: center; }
+  .letter { width: 38px; height: 38px; border-radius: 13px; background: var(--a); color: #1a0a03; font-weight: 900; display: grid; place-items: center; font-size: 18px; flex: none; }
+  .head h2 { margin: 0; font-size: 17px; } .head p { margin: 2px 0 0; font-size: 12.5px; color: var(--mute); line-height: 1.35; }
+  .amtbar { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .amt { font-size: 36px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; transition: color .2s, text-shadow .2s; }
+  .amt.hot { color: var(--hot); text-shadow: 0 0 22px rgba(255,77,77,.6); }
+  .tag { font-size: 11px; font-weight: 800; background: var(--hot); color: #fff; padding: 4px 9px; border-radius: 99px; opacity: 0; transform: scale(.7); transition: .25s cubic-bezier(.3,1.7,.5,1); white-space: nowrap; }
+  .tag.on { opacity: 1; transform: scale(1); }
+  .sp { flex: 1; }
+  .sm { font: inherit; font-size: 13px; font-weight: 800; color: var(--mute); background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; cursor: pointer; }
+  .stage { display: grid; place-items: center; padding: 6px 0; position: relative; }
+  .hint { font-size: 12px; color: var(--mute); text-align: center; margin-top: 4px; line-height: 1.4; }
+  .shake { animation: shake .45s; } @keyframes shake { 20% { transform: translateX(-9px) } 40% { transform: translateX(9px) } 60% { transform: translateX(-5px) } 80% { transform: translateX(5px) } }
+  svg.rad { width: 100%; display: block; touch-action: none; cursor: grab; overflow: visible; }
+  .dg { font-size: 22px; font-weight: 800; fill: #fff; pointer-events: none; } .dg.on { fill: #1a0a03; } .dg.s { font-size: 15px; }
+  .bub { fill: rgba(255,255,255,.08); stroke: var(--line); transition: fill .1s; } .bub.on { fill: var(--a); stroke: none; }
+  .puck { transition: transform .22s cubic-bezier(.3,1.5,.5,1); } .puck.drag { transition: none; }
+  .wedge { fill: rgba(255,122,69,.22); opacity: 0; transition: opacity .1s; } .wedge.on { opacity: 1; }
+  /* keypad */
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 330px; }
+  .key { position: relative; height: 56px; border-radius: 18px; background: rgba(255,255,255,.08); border: 1px solid var(--line); font-size: 24px; font-weight: 800; display: grid; place-items: center; touch-action: none; cursor: pointer; transition: transform .08s, background .1s; }
+  .key.down { background: var(--a); color: #1a0a03; transform: scale(.96); }
+  .key small { position: absolute; top: 5px; right: 8px; font-size: 9.5px; font-weight: 800; color: var(--mute); }
+  .key.down small { color: #1a0a03; }
+  .key .pv { position: absolute; left: 50%; top: -46px; transform: translateX(-50%); background: var(--a); color: #1a0a03; padding: 6px 12px; border-radius: 12px; font-size: 18px; white-space: nowrap; pointer-events: none; z-index: 5; display: none; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+  .key.down .pv { display: block; }
+  /* strip */
+  .strip { position: relative; display: flex; width: 100%; max-width: 340px; height: 64px; border-radius: 20px; background: rgba(0,0,0,.3); border: 1px solid var(--line); touch-action: none; cursor: pointer; margin-top: 56px; }
+  .strip div { flex: 1; display: grid; place-items: center; font-size: 20px; font-weight: 800; color: var(--mute); }
+  .strip div.on { color: transparent; }
+  .bubble { position: absolute; top: -66px; width: 52px; height: 62px; margin-left: -26px; border-radius: 16px; background: var(--a); color: #1a0a03; font-size: 34px; font-weight: 900; display: none; place-items: center; box-shadow: 0 8px 22px rgba(0,0,0,.45); pointer-events: none; z-index: 4; }
+  .bubble::after { content: ''; position: absolute; bottom: -7px; left: 50%; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: var(--a); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+  .chip { font: inherit; font-size: 13px; font-weight: 800; padding: 8px 14px; border-radius: 99px; background: var(--card); border: 1px solid var(--line); color: #fff; cursor: pointer; touch-action: manipulation; }
+  .chip.on { background: var(--a); color: #1a0a03; border-color: transparent; }
+  .chip:active { transform: scale(.94); }
+  .tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 4px; width: 100%; }
+</style>
+</head>
+<body>
+<h1>More amount options — pick one</h1>
+<p class="lead">Six variations on the flick idea you liked. Every one builds the number digit by digit, so any amount is easy: try typing <b>37</b>, then <b>1,250</b>, then <b>4,086</b> in each. Tell me the letter (or a mix) and I’ll build it into Pulse.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const MAX = 99999, DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+const fmt = (n) => '₹' + n.toLocaleString('en-IN');
+const buzz = (m = 5) => { try { navigator.vibrate && navigator.vibrate(m) } catch (e) {} };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const P = (r, deg) => [r * Math.sin(deg * Math.PI / 180), -r * Math.cos(deg * Math.PI / 180)];
+const f1 = (n) => n.toFixed(1);
+const NS = 'http://www.w3.org/2000/svg';
+
+function card(letter, title, how, hint) {
+  const el = document.createElement('section');
+  el.className = 'opt';
+  el.innerHTML = `<div class="head"><div class="letter">${letter}</div><div><h2>${title}</h2><p>${how}</p></div></div>
+    <div class="amtbar"><div class="amt">₹0</div><div class="tag"></div><div class="sp"></div><button class="sm bk">⌫</button><button class="sm cl">Clear</button></div>
+    <div class="stage"></div><div class="hint">${hint}</div>`;
+  document.getElementById('wrap').appendChild(el);
+  const amtEl = el.querySelector('.amt'), tag = el.querySelector('.tag');
+  let v = 0, tier = 0;
+  const api = {
+    stage: el.querySelector('.stage'),
+    get: () => v,
+    set(n) {
+      v = clamp(Math.round(n), 0, MAX); amtEl.textContent = fmt(v);
+      const t = v >= 10000 ? 3 : v >= 5000 ? 2 : v >= 1000 ? 1 : 0;
+      amtEl.classList.toggle('hot', t > 0);
+      tag.textContent = ['', 'Heavy one.', 'Whoa — that hurt.', 'Legendary spend.'][t]; tag.classList.toggle('on', t > 0);
+      if (t > tier) { buzz([30, 40, 60]); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+      tier = t;
+    },
+    push(d) { const n = v * 10 + d; if (n <= MAX) api.set(n); },
+    times(k) { api.set(v * k); },
+    back() { api.set(Math.floor(v / 10)); },
+  };
+  el.querySelector('.bk').onclick = () => api.back();
+  el.querySelector('.cl').onclick = () => api.set(0);
+  return api;
+}
+
+/* pointer position inside an svg, in viewBox units */
+function pol(e, svg) {
+  const [vx, vy, vw] = svg.getAttribute('viewBox').split(' ').map(Number), r = svg.getBoundingClientRect(), s = vw / r.width;
+  const x = (e.clientX - r.left) * s + vx, y = (e.clientY - r.top) * s + vy;
+  return { x, y, r: Math.hypot(x, y), a: ((Math.atan2(x, -y) * 180 / Math.PI) + 360) % 360, sa: Math.atan2(x, -y) * 180 / Math.PI };
+}
+function wedgePath(a, b, r0, r1) { const pt = (r, d) => P(r, d).map(f1).join(' '); return `M${pt(r0, a)} L${pt(r1, a)} A${r1} ${r1} 0 0 1 ${pt(r1, b)} L${pt(r0, b)} A${r0} ${r0} 0 0 0 ${pt(r0, a)}Z`; }
+const g = (inner) => { const e = document.createElementNS(NS, 'g'); e.innerHTML = inner; return e; };
+const bubbleG = (x, y, r, t, small) => `<circle class="bub" cx="${f1(x)}" cy="${f1(y)}" r="${r}"/><text class="dg${small ? ' s' : ''}" x="${f1(x)}" y="${f1(y)}" text-anchor="middle" dominant-baseline="central">${t}</text>`;
+
+/* ===== shared: radial flick selector (circle or fan) ===== */
+/* items: [{zone(p)->bool, label, act(), el nodes}] built by caller */
+function flickSvg(c, host, cfg) {
+  host.innerHTML = `<svg class="rad" viewBox="${cfg.vb}"><circle class="base" r="${cfg.base}" fill="rgba(0,0,0,.32)" stroke="var(--line)"/><path class="wedge"/><g class="items"></g><g class="puck"><circle r="${cfg.puckR}" fill="#241510" stroke="var(--a)" stroke-width="3"/><text class="pt" y="2" text-anchor="middle" dominant-baseline="central" font-size="${cfg.puckR * 0.85}" font-weight="800" fill="#fff">●</text></g></svg>`;
+  const svg = host.querySelector('svg'), items = svg.querySelector('.items'), wedge = svg.querySelector('.wedge'), puck = svg.querySelector('.puck'), pt = svg.querySelector('.pt');
+  if (cfg.fan) svg.querySelector('.base').outerHTML = `<path d="M-${cfg.base} 0 A${cfg.base} ${cfg.base} 0 0 1 ${cfg.base} 0 Z" fill="rgba(0,0,0,.32)" stroke="var(--line)"/>`;
+  const nodes = cfg.slots.map((s) => { const n = g(bubbleG(s.x, s.y, s.r, s.label, s.small)); items.appendChild(n); return { n, b: n.querySelector('.bub'), t: n.querySelector('text') }; });
+  let sel = -1, down = false;
+  const light = (i) => { nodes.forEach((o, j) => { o.b.classList.toggle('on', j === i); o.t.classList.toggle('on', j === i); }); if (i < 0) wedge.classList.remove('on'); else { const s = cfg.slots[i]; wedge.setAttribute('d', wedgePath(s.a0, s.a1, s.r0, s.r1)); wedge.classList.add('on'); } };
+  const handle = (e) => {
+    const p = pol(e, svg); const k = Math.hypot(p.x, p.y), cl = k > cfg.maxPuck ? cfg.maxPuck / k : 1;
+    puck.classList.add('drag'); puck.style.transform = `translate(${p.x * cl}px,${p.y * cl}px)`;
+    const i = cfg.pick(p); if (i !== sel) { sel = i; light(i); pt.textContent = i < 0 ? '●' : cfg.slots[i].label; if (i >= 0) buzz(4); }
+  };
+  svg.onpointerdown = (e) => { svg.setPointerCapture && svg.setPointerCapture(e.pointerId); down = true; sel = -2; handle(e); };
+  svg.onpointermove = (e) => { if (down) handle(e); };
+  svg.onpointerup = svg.onpointercancel = () => {
+    if (!down) return; down = false;
+    if (sel >= 0) { cfg.slots[sel].act(); buzz([10, 20, 10]); }
+    sel = -1; light(-1); pt.textContent = '●'; puck.classList.remove('drag'); puck.style.transform = 'translate(0px,0px)';
+  };
+}
+
+/* ---------- A: flick circle + shortcut ring ---------- */
+function circle(c, host) {
+  const slots = DIGITS.map((d, i) => { const [x, y] = P(108, i * 36); return { x, y, r: 21, label: d, a0: i * 36 - 18, a1: i * 36 + 18, r0: 84, r1: 148, act: () => c.push(d) }; });
+  const SC = [['00', 45, () => c.times(100)], ['000', 135, () => c.times(1000)], ['⌫', 225, () => c.back()], ['C', 315, () => c.set(0)]];
+  SC.forEach(([t, a, act]) => { const [x, y] = P(62, a); slots.push({ x, y, r: 17, label: t, small: true, a0: a - 45, a1: a + 45, r0: 42, r1: 82, act }); });
+  flickSvg(c, host, { vb: '-150 -150 300 300', base: 148, puckR: 38, maxPuck: 112, slots,
+    pick: (p) => { if (p.r < 42) return -1; if (p.r < 84) return 10 + Math.floor(p.a / 90); return Math.round(p.a / 36) % 10; } });
+}
+(function () {
+  const c = card('A', 'Flick circle', 'Your favourite B, improved. Press, flick to a digit, release. 37 = flick to 3, flick to 7. Tapping a digit directly works too. The inner ring has 00, 000, delete and clear.', 'Inner ring: 00 · 000 · ⌫ · C — 15 + 00 = 1,500');
+  circle(c, c.stage); c.stage.firstChild.parentNode.style.maxWidth = '310px'; c.stage.style.margin = '0 auto';
+})();
+
+/* ---------- B: thumb fan ---------- */
+(function () {
+  const c = card('B', 'Thumb fan', 'A half-circle that sits at the bottom, right under your thumb. Press the pivot, flick up to a digit, release. Wider sectors than the full circle, so less mis-flicks.', 'One-handed friendly · inner arc: C · ⌫ · 00 · 000');
+  const slots = DIGITS.map((d, i) => { const a = -90 + 9 + 18 * i, [x, y] = P(142, a); return { x, y, r: 22, label: d, a0: a - 9, a1: a + 9, r0: 92, r1: 176, act: () => c.push(d) }; });
+  [['C', -67.5, () => c.set(0)], ['⌫', -22.5, () => c.back()], ['00', 22.5, () => c.times(100)], ['000', 67.5, () => c.times(1000)]].forEach(([t, a, act]) => { const [x, y] = P(66, a); slots.push({ x, y, r: 20, label: t, small: true, a0: a - 22.5, a1: a + 22.5, r0: 40, r1: 90, act }); });
+  flickSvg(c, c.stage, { vb: '-180 -190 360 240', base: 178, puckR: 32, maxPuck: 130, fan: true, slots,
+    pick: (p) => { if (p.y > 8 || p.r < 40) return -1; const sa = clamp(p.sa, -89.9, 89.9); if (p.r < 92) return 10 + Math.floor((sa + 90) / 45); return Math.floor((sa + 90) / 18); } });
+  c.stage.querySelector('svg').style.maxWidth = '360px';
+})();
+
+/* ---------- C: flick keypad ---------- */
+(function () {
+  const c = card('C', 'Flick keypad', 'A compact keypad where every key is also a shortcut. Tap = the digit. Swipe a key up a little = digit + 00 (5 → 500). Swipe further = digit + 000 (5 → 5,000).', 'Tap 3, tap 7 = 37 · swipe 2 up = 200 · swipe 5 far up = 5,000');
+  c.stage.innerHTML = '<div class="pad"></div>'; const pad = c.stage.firstChild;
+  const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'C'];
+  KEYS.forEach((k) => {
+    const el = document.createElement('div'); el.className = 'key'; const dig = /\d/.test(k);
+    el.innerHTML = `${k}${dig ? '<small>↑00</small>' : ''}<span class="pv"></span>`; pad.appendChild(el);
+    const pv = el.querySelector('.pv'); let sy = 0, mode = 0, on = false;
+    const upd = (dy) => { const m = dy > 80 ? 2 : dy > 28 ? 1 : 0; if (m !== mode) { mode = m; buzz(m ? 8 : 3); } pv.textContent = k + ['', '00', '000'][mode]; };
+    el.onpointerdown = (e) => { el.setPointerCapture && el.setPointerCapture(e.pointerId); on = true; sy = e.clientY; mode = 0; el.classList.add('down'); if (dig) { pv.textContent = k; } buzz(3); };
+    el.onpointermove = (e) => { if (on && dig) upd(sy - e.clientY); };
+    el.onpointerup = el.onpointercancel = () => {
+      if (!on) return; on = false; el.classList.remove('down');
+      if (!dig) { k === '⌫' ? c.back() : c.set(0); return; }
+      c.push(+k); if (mode === 1) c.times(100); if (mode === 2) c.times(1000); buzz([8, 16, 8]);
+    };
+  });
+})();
+
+/* ---------- D: slide strip with magnifier ---------- */
+(function () {
+  const c = card('D', 'Slide strip', 'All ten digits in one row under your thumb. Touch, slide until the big magnified digit above your finger is the one you want, and let go.', 'The bubble shows what you will type · row below: 00 · 000 · ⌫ · C');
+  c.stage.innerHTML = '<div class="strip"><div class="bubble"></div></div><div class="chips"><button class="chip" data-a="00">00</button><button class="chip" data-a="000">000</button><button class="chip" data-a="b">⌫</button><button class="chip" data-a="c">C</button></div>';
+  const strip = c.stage.querySelector('.strip'), bub = strip.querySelector('.bubble'); strip.insertAdjacentHTML('afterbegin', DIGITS.map((d) => `<div>${d}</div>`).join(''));
+  const cells = [...strip.querySelectorAll('div:not(.bubble)')]; let sel = -1, down = false;
+  const idx = (e) => { const r = strip.getBoundingClientRect(); return clamp(Math.floor((e.clientX - r.left) / r.width * 10), 0, 9); };
+  const show = (i) => { if (i === sel) return; sel = i; cells.forEach((el, j) => el.classList.toggle('on', j === i)); const r = strip.getBoundingClientRect(); bub.style.left = (i + 0.5) / 10 * r.width + 'px'; bub.textContent = DIGITS[i]; bub.style.display = 'grid'; buzz(3); };
+  strip.onpointerdown = (e) => { strip.setPointerCapture && strip.setPointerCapture(e.pointerId); down = true; sel = -1; show(idx(e)); };
+  strip.onpointermove = (e) => { if (down) show(idx(e)); };
+  strip.onpointerup = strip.onpointercancel = () => { if (!down) return; down = false; if (sel >= 0) { c.push(DIGITS[sel]); buzz([8, 16, 8]); } sel = -1; cells.forEach((el) => el.classList.remove('on')); bub.style.display = 'none'; };
+  c.stage.querySelectorAll('.chip').forEach((b) => b.onclick = () => { const a = b.dataset.a; a === '00' ? c.times(100) : a === '000' ? c.times(1000) : a === 'b' ? c.back() : c.set(0); buzz(6); });
+})();
+
+/* ---------- E: your usual amounts + mini flick circle ---------- */
+(function () {
+  const c = card('E', 'Usual amounts + flick', 'Pulse learns your common amounts per category and shows them as one-tap chips (demo values here). For anything new, flick the little circle below.', 'Tap a chip to set the amount · otherwise flick digits, e.g. 37');
+  const USUAL = { Food: [37, 80, 120, 250, 450], Coffee: [37, 60, 90, 150], Ride: [45, 120, 300, 850] };
+  c.stage.innerHTML = '<div class="tabs"></div><div class="chips" style="margin:0 0 6px"></div><div class="mini" style="width:100%;max-width:230px"></div>';
+  const tabs = c.stage.querySelector('.tabs'), chips = c.stage.querySelector('.chips');
+  let cat = 'Food';
+  const draw = () => {
+    tabs.innerHTML = Object.keys(USUAL).map((k) => `<button class="chip${k === cat ? ' on' : ''}" data-k="${k}">${k}</button>`).join('');
+    chips.innerHTML = USUAL[cat].map((n) => `<button class="chip" data-n="${n}">${fmt(n)}</button>`).join('');
+    tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { cat = b.dataset.k; draw(); buzz(5); });
+    chips.querySelectorAll('button').forEach((b) => b.onclick = () => { c.set(+b.dataset.n); buzz([8, 16, 8]); });
+  };
+  draw(); circle(c, c.stage.querySelector('.mini'));
+})();
+
+/* ---------- F: compass (8 directions + centre) ---------- */
+(function () {
+  const c = card('F', 'Compass flick', 'The most minimal: no ring to aim at. Press anywhere on the pad and flick in a direction, like a phone keypad laid out as a compass. Each direction is a fixed digit.', 'Up-left 1 · up 2 · up-right 3 · left 4 · tap 5 · right 6 · down-left 7 · down 8 · down-right 9 · long-press 0');
+  c.stage.innerHTML = '<svg class="rad" viewBox="-150 -150 300 300" style="max-width:290px"><circle r="148" fill="rgba(0,0,0,.32)" stroke="var(--line)"/><path class="wedge"/><g class="lab"></g><g class="puck"><circle r="38" fill="#241510" stroke="var(--a)" stroke-width="3"/><text class="pt" y="2" text-anchor="middle" dominant-baseline="central" font-size="32" font-weight="800" fill="#fff">5</text></g></svg>';
+  const svg = c.stage.firstChild, lab = svg.querySelector('.lab'), wedge = svg.querySelector('.wedge'), puck = svg.querySelector('.puck'), pt = svg.querySelector('.pt');
+  // directions: index by 45° sector from top clockwise: 0 up(2) 1 up-right(3) 2 right(6) 3 down-right(9) 4 down(8) 5 down-left(7) 6 left(4) 7 up-left(1)
+  const MAP = [2, 3, 6, 9, 8, 7, 4, 1];
+  MAP.forEach((d, i) => { const [x, y] = P(108, i * 45); lab.appendChild(g(bubbleG(x, y, 22, d))); });
+  let down = false, sel = -1, hold; const nodes = [...lab.children];
+  const light = (i) => { nodes.forEach((n, j) => { n.querySelector('.bub').classList.toggle('on', j === i); n.querySelector('text').classList.toggle('on', j === i); }); if (i < 0) wedge.classList.remove('on'); else { wedge.setAttribute('d', wedgePath(i * 45 - 22.5, i * 45 + 22.5, 44, 148)); wedge.classList.add('on'); } };
+  let zero = false;
+  const handle = (e) => {
+    const p = pol(e, svg), k = Math.hypot(p.x, p.y), cl = k > 112 ? 112 / k : 1; puck.classList.add('drag'); puck.style.transform = `translate(${p.x * cl}px,${p.y * cl}px)`;
+    const i = p.r < 44 ? -1 : Math.round(p.a / 45) % 8;
+    if (i !== sel) { sel = i; light(i); clearTimeout(hold); zero = false; pt.textContent = i < 0 ? '5' : MAP[i]; if (i < 0) hold = setTimeout(() => { zero = true; pt.textContent = '0'; buzz(14); }, 450); else buzz(4); }
+  };
+  svg.onpointerdown = (e) => { svg.setPointerCapture && svg.setPointerCapture(e.pointerId); down = true; sel = -2; handle(e); };
+  svg.onpointermove = (e) => { if (down) handle(e); };
+  svg.onpointerup = svg.onpointercancel = () => {
+    if (!down) return; down = false; clearTimeout(hold);
+    c.push(sel >= 0 ? MAP[sel] : zero ? 0 : 5); buzz([10, 20, 10]);
+    sel = -1; light(-1); pt.textContent = '5'; puck.classList.remove('drag'); puck.style.transform = 'translate(0px,0px)';
+  };
+})();
+</script>
+</body>
+</html>

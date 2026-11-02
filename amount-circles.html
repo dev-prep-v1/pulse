@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Circle amount options</title>
+<style>
+  :root { --a: #ff7a45; --hot: #ff4d4d; --line: rgba(255,255,255,.14); --card: rgba(255,255,255,.06); --mute: rgba(255,255,255,.55); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: radial-gradient(120% 60% at 80% -10%, #4a1d0f, #140a07 60%) #140a07; color: #fff; font-family: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif; -webkit-user-select: none; user-select: none; padding: 20px 16px 80px; }
+  h1 { font-size: 22px; margin: 6px 0 4px; } .lead { color: var(--mute); font-size: 14px; line-height: 1.5; margin: 0 0 22px; max-width: 580px; }
+  .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+  .opt { background: var(--card); border: 1px solid var(--line); border-radius: 26px; padding: 16px; min-width: 0; }
+  .head { display: flex; gap: 12px; align-items: center; }
+  .letter { width: 38px; height: 38px; border-radius: 13px; background: var(--a); color: #1a0a03; font-weight: 900; display: grid; place-items: center; font-size: 18px; flex: none; }
+  .head h2 { margin: 0; font-size: 17px; } .head p { margin: 2px 0 0; font-size: 12.5px; color: var(--mute); line-height: 1.35; }
+  .amtbar { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .amt { font-size: 36px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; transition: color .2s, text-shadow .2s; }
+  .amt.hot { color: var(--hot); text-shadow: 0 0 22px rgba(255,77,77,.6); }
+  .tag { font-size: 11px; font-weight: 800; background: var(--hot); color: #fff; padding: 4px 9px; border-radius: 99px; opacity: 0; transform: scale(.7); transition: .25s cubic-bezier(.3,1.7,.5,1); white-space: nowrap; }
+  .tag.on { opacity: 1; transform: scale(1); }
+  .sp { flex: 1; }
+  .sm { font: inherit; font-size: 13px; font-weight: 800; color: var(--mute); background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; cursor: pointer; }
+  .stage { display: grid; place-items: center; padding: 4px 0; }
+  .circ { width: 100%; max-width: 310px; touch-action: none; }
+  .circ svg { width: 100%; display: block; touch-action: none; cursor: grab; overflow: visible; }
+  .hint { font-size: 12px; color: var(--mute); text-align: center; margin-top: 4px; line-height: 1.4; }
+  .shake { animation: shake .45s; } @keyframes shake { 20% { transform: translateX(-9px) } 40% { transform: translateX(9px) } 60% { transform: translateX(-5px) } 80% { transform: translateX(5px) } }
+  .dg { font-size: 22px; font-weight: 800; fill: #fff; pointer-events: none; }
+  .dg.on { fill: #1a0a03; }
+  .bub { fill: rgba(255,255,255,.08); stroke: var(--line); transition: fill .12s; }
+  .bub.on { fill: var(--a); stroke: none; }
+  .puck { transition: transform .22s cubic-bezier(.3,1.5,.5,1); }
+  .puck.drag { transition: none; }
+  .wedge { fill: rgba(255,122,69,.22); stroke: none; opacity: 0; transition: opacity .1s; }
+  .wedge.on { opacity: 1; }
+  .trail { fill: none; stroke: var(--a); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; opacity: .5; transition: opacity .4s; }
+</style>
+</head>
+<body>
+<h1>Circle amount entry — pick one</h1>
+<p class="lead">Five circle-only ideas. In each, you hold a control in the middle and use the ring of digits 0–9 around it. Try them with your thumb (open on your phone for the real feel). Tell me the letter, or a mix, and I’ll build it into Pulse.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const MAX = 99999, DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+const fmt = (n) => '₹' + n.toLocaleString('en-IN');
+const buzz = (m = 5) => { try { navigator.vibrate && navigator.vibrate(m) } catch (e) {} };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const wrapA = (d) => ((((d + 180) % 360) + 360) % 360) - 180;
+const P = (r, deg) => [r * Math.sin(deg * Math.PI / 180), -r * Math.cos(deg * Math.PI / 180)]; // 0° = top, clockwise
+const f1 = (n) => n.toFixed(1);
+
+function card(letter, title, how, hint) {
+  const el = document.createElement('section');
+  el.className = 'opt';
+  el.innerHTML = `<div class="head"><div class="letter">${letter}</div><div><h2>${title}</h2><p>${how}</p></div></div>
+    <div class="amtbar"><div class="amt">₹0</div><div class="tag"></div><div class="sp"></div><button class="sm bk" title="Delete last digit">⌫</button><button class="sm cl">Clear</button></div>
+    <div class="stage"></div><div class="hint">${hint}</div>`;
+  document.getElementById('wrap').appendChild(el);
+  const amtEl = el.querySelector('.amt'), tag = el.querySelector('.tag');
+  let v = 0, tier = 0, onClear = () => {};
+  const api = {
+    stage: el.querySelector('.stage'),
+    get: () => v,
+    set(n) {
+      v = clamp(Math.round(n), 0, MAX);
+      amtEl.textContent = fmt(v);
+      const t = v >= 10000 ? 3 : v >= 5000 ? 2 : v >= 1000 ? 1 : 0;
+      amtEl.classList.toggle('hot', t > 0);
+      tag.textContent = ['', 'Heavy one.', 'Whoa — that hurt.', 'Legendary spend.'][t];
+      tag.classList.toggle('on', t > 0);
+      if (t > tier) { buzz([30, 40, 60]); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+      tier = t;
+    },
+    push(d) { const n = v * 10 + d; if (n <= MAX) api.set(n); },
+    back() { api.set(Math.floor(v / 10)); },
+    onClear(fn) { onClear = fn },
+  };
+  el.querySelector('.bk').onclick = () => api.back();
+  el.querySelector('.cl').onclick = () => { api.set(0); onClear(); };
+  return api;
+}
+
+/* Shared ring: digits 1..9,0 clockwise from the top, wedge highlight, trail, hold puck. */
+function ring(c, o = {}) {
+  const R = o.ringR || 100, W0 = o.wedgeR0 || 58, W1 = o.wedgeR1 || 148, BR = o.bubble || 22;
+  const bubbles = DIGITS.map((d, i) => { const [x, y] = P(R, i * 36); return `<g class="bg" data-i="${i}"><circle class="bub" cx="${f1(x)}" cy="${f1(y)}" r="${BR}"/><text class="dg" x="${f1(x)}" y="${f1(y)}" text-anchor="middle" dominant-baseline="central">${d}</text></g>`; }).join('');
+  c.stage.innerHTML = `<div class="circ"><svg viewBox="-150 -150 300 300">
+    <circle r="148" fill="rgba(0,0,0,.32)" stroke="var(--line)"/>
+    <path class="wedge" d=""/>
+    <g class="extra"></g>
+    ${bubbles}
+    <polyline class="trail" points=""/>
+    <g class="puck"><circle r="40" fill="#241510" stroke="var(--a)" stroke-width="3"/><circle class="prog" r="46" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" transform="rotate(-90)"/><text class="ptxt" y="2" text-anchor="middle" dominant-baseline="central" font-size="34" font-weight="800" fill="#fff">●</text></g>
+  </svg></div>`;
+  const svg = c.stage.querySelector('svg'), wedge = svg.querySelector('.wedge'), trail = svg.querySelector('.trail'), puck = svg.querySelector('.puck'), ptxt = svg.querySelector('.ptxt'), prog = svg.querySelector('.prog');
+  const bs = [...svg.querySelectorAll('.bg')];
+  const api = {
+    svg, puck, ptxt, extra: svg.querySelector('.extra'), R,
+    polar(e) {
+      const r = svg.getBoundingClientRect(), s = 300 / r.width;
+      const x = (e.clientX - (r.left + r.width / 2)) * s, y = (e.clientY - (r.top + r.height / 2)) * s;
+      return { x, y, r: Math.hypot(x, y), a: ((Math.atan2(x, -y) * 180 / Math.PI) + 360) % 360 };
+    },
+    sector: (a) => Math.round(a / 36) % 10,
+    wedge(center, half, r0, r1) {
+      if (center === null) { wedge.classList.remove('on'); return; }
+      const [a, b] = [center - half, center + half], pt = (r, d) => P(r, d).map(f1).join(' ');
+      wedge.setAttribute('d', `M${pt(r0, a)} L${pt(r1, a)} A${r1} ${r1} 0 0 1 ${pt(r1, b)} L${pt(r0, b)} A${r0} ${r0} 0 0 0 ${pt(r0, a)}Z`);
+      wedge.classList.add('on');
+    },
+    hl(i) { api.wedge(i < 0 ? null : i * 36, 18, W0, W1); bs.forEach((b, j) => { b.querySelector('.bub').classList.toggle('on', j === i); b.querySelector('.dg').classList.toggle('on', j === i); }); },
+    puckTo(x, y, dragging) { const r = Math.hypot(x, y), k = r > 108 ? 108 / r : 1; puck.classList.toggle('drag', !!dragging); puck.style.transform = `translate(${x * k}px,${y * k}px)`; },
+    trail(pts) { trail.style.transition = 'none'; trail.style.opacity = '.5'; trail.setAttribute('points', pts.map((p) => f1(p[0]) + ',' + f1(p[1])).join(' ')); },
+    fade() { trail.style.transition = 'opacity .4s'; trail.style.opacity = '0'; },
+    release() { puck.classList.remove('drag'); puck.style.transform = 'translate(0px,0px)'; api.hl(-1); ptxt.textContent = '●'; api.progress(0); api.fade(); },
+    progress(p) { prog.style.strokeDashoffset = 289 * (1 - clamp(p, 0, 1)); },
+    bubbles: bs,
+  };
+  return api;
+}
+
+/* ---------- A: trace path (your example) ---------- */
+(function () {
+  const c = card('A', 'Trace path', 'Hold the centre, slide to 1, then 2, then 4 in one stroke and it types 124. Every digit you touch is typed.', 'Same digit twice (e.g. 11): slide out, come back to the centre, then out again');
+  const R = ring(c);
+  let down = false, last = -1, armed = true, trail = [];
+  const handle = (e) => {
+    const p = R.polar(e); R.puckTo(p.x, p.y, true); trail.push([p.x, p.y]); R.trail(trail);
+    if (p.r < 46) { armed = true; R.hl(-1); }
+    else if (p.r > 58) { const s = R.sector(p.a); R.hl(s); if (s !== last || armed) { c.push(DIGITS[s]); last = s; armed = false; buzz(8); } }
+  };
+  R.svg.onpointerdown = (e) => { R.svg.setPointerCapture(e.pointerId); down = true; last = -1; armed = true; trail = []; handle(e); };
+  R.svg.onpointermove = (e) => { if (down) handle(e); };
+  R.svg.onpointerup = R.svg.onpointercancel = () => { down = false; R.release(); };
+})();
+
+/* ---------- B: flick & release ---------- */
+(function () {
+  const c = card('B', 'Flick & release', 'Press the centre, flick toward a digit and let go. One quick flick = one digit. Drag back to the centre to cancel.', 'Fast for round numbers: flick, flick, flick');
+  const R = ring(c);
+  let down = false, sel = -1;
+  const handle = (e) => {
+    const p = R.polar(e); R.puckTo(p.x, p.y, true);
+    sel = p.r > 46 ? R.sector(p.a) : -1;
+    R.hl(sel); R.ptxt.textContent = sel < 0 ? '●' : DIGITS[sel];
+    if (sel !== handle.last) { handle.last = sel; if (sel >= 0) buzz(4); }
+  };
+  R.svg.onpointerdown = (e) => { R.svg.setPointerCapture(e.pointerId); down = true; handle.last = -2; handle(e); };
+  R.svg.onpointermove = (e) => { if (down) handle(e); };
+  R.svg.onpointerup = R.svg.onpointercancel = () => { down = false; if (sel >= 0) { c.push(DIGITS[sel]); buzz([10, 20, 10]); } sel = -1; R.release(); };
+})();
+
+/* ---------- C: dwell to type ---------- */
+(function () {
+  const c = card('C', 'Hold to type', 'Slide the puck over a digit and keep holding. A ring fills around the puck, then the digit is typed. Slide freely without typing by accident.', 'Hold ~0.4s on a digit · slide to another and hold again · same digit again: touch the centre in between');
+  const R = ring(c);
+  const DWELL = 400;
+  let down = false, sel = -1, since = 0, done = false, raf = 0;
+  const loop = (now) => {
+    if (!down) return;
+    if (sel >= 0 && !done) { const p = (now - since) / DWELL; R.progress(p); if (p >= 1) { c.push(DIGITS[sel]); done = true; R.progress(0); buzz([12, 20, 12]); R.puck.classList.add('pop'); } }
+    raf = requestAnimationFrame(loop);
+  };
+  const handle = (e) => {
+    const p = R.polar(e); R.puckTo(p.x, p.y, true);
+    const s = p.r > 58 ? R.sector(p.a) : -1;
+    if (s !== sel) { sel = s; since = performance.now(); done = false; R.progress(0); R.hl(s); R.ptxt.textContent = s < 0 ? '●' : DIGITS[s]; if (s >= 0) buzz(3); }
+  };
+  R.svg.onpointerdown = (e) => { R.svg.setPointerCapture(e.pointerId); down = true; sel = -1; handle(e); raf = requestAnimationFrame(loop); };
+  R.svg.onpointermove = (e) => { if (down) handle(e); };
+  R.svg.onpointerup = R.svg.onpointercancel = () => { down = false; cancelAnimationFrame(raf); sel = -1; R.release(); };
+})();
+
+/* ---------- D: trace + shortcut ring ---------- */
+(function () {
+  const c = card('D', 'Trace + shortcut ring', 'Like A, but a small inner ring holds the shortcuts: 00, 000, delete and clear. Round amounts like 1,500 take three touches.', '1 → 5 → 00 in one stroke = 1500');
+  const R = ring(c, { ringR: 116, wedgeR0: 88, wedgeR1: 148, bubble: 21 });
+  const INNER = [['000', 45], ['⌫', 135], ['C', 225], ['00', 315]]; // [label, centre angle]
+  INNER.forEach(([t, a], i) => { const [x, y] = P(66, a); R.extra.insertAdjacentHTML('beforeend', `<g data-k="${i}"><circle class="bub ib" cx="${f1(x)}" cy="${f1(y)}" r="21"/><text class="dg ib-t" x="${f1(x)}" y="${f1(y)}" text-anchor="middle" dominant-baseline="central" style="font-size:16px">${t}</text></g>`); });
+  const ibs = [...R.extra.querySelectorAll('.ib')], its = [...R.extra.querySelectorAll('.ib-t')];
+  const lit = (k) => ibs.forEach((b, i) => { b.classList.toggle('on', i === k); its[i].classList.toggle('on', i === k); });
+  let down = false, last = '', armed = true, trail = [];
+  const act = (k) => { if (k === 0) c.set(c.get() * 1000); else if (k === 1) c.back(); else if (k === 2) c.set(0); else c.set(c.get() * 100); };
+  const handle = (e) => {
+    const p = R.polar(e); R.puckTo(p.x, p.y, true); trail.push([p.x, p.y]); R.trail(trail);
+    if (p.r < 46) { armed = true; R.hl(-1); lit(-1); return; }
+    if (p.r < 90) { const k = Math.floor(p.a / 90); lit(k); R.hl(-1); R.wedge(k * 90 + 45, 45, 46, 88); const key = 'i' + k; if (key !== last || armed) { act(k); last = key; armed = false; buzz(10); } return; }
+    lit(-1); const s = R.sector(p.a); R.hl(s); const key = 'd' + s;
+    if (key !== last || armed) { c.push(DIGITS[s]); last = key; armed = false; buzz(8); }
+  };
+  R.svg.onpointerdown = (e) => { R.svg.setPointerCapture(e.pointerId); down = true; last = ''; armed = true; trail = []; handle(e); };
+  R.svg.onpointermove = (e) => { if (down) handle(e); };
+  R.svg.onpointerup = R.svg.onpointercancel = () => { down = false; lit(-1); R.release(); };
+})();
+
+/* ---------- E: rotate ring, tap centre ---------- */
+(function () {
+  const c = card('E', 'Rotate & tap', 'The digit ring is a dial. Spin it with momentum until the digit you want sits at the top marker, then tap the centre to type it.', 'Spin the ring · tap the middle button · hold the middle to type it repeatedly');
+  const R = ring(c);
+  R.bubbles.forEach((b) => b.style.display = 'none'); // use our own rotating ring
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g'); R.svg.insertBefore(g, R.puck);
+  const items = DIGITS.map((d, i) => { const [x, y] = P(100, i * 36); const gg = document.createElementNS(ns, 'g'); gg.innerHTML = `<circle class="bub" cx="${f1(x)}" cy="${f1(y)}" r="22"/><text class="dg" x="0" y="0" text-anchor="middle" dominant-baseline="central">${d}</text>`; g.appendChild(gg); return { gg, x, y, b: gg.querySelector('.bub'), t: gg.querySelector('text') }; });
+  R.extra.innerHTML = '<path d="M-10 -146 L10 -146 L0 -128 Z" fill="var(--a)"/>';
+  let rot = 0, vel = 0, down = false, last = 0, lt = 0, raf = 0, topIdx = 0, holdT, rep;
+  const idxOf = (r) => ((Math.round(-r / 36) % 10) + 10) % 10;
+  const paint = () => {
+    g.style.transform = `rotate(${rot}deg)`;
+    items.forEach((it, i) => { it.t.setAttribute('transform', `translate(${f1(it.x)} ${f1(it.y)}) rotate(${f1(-rot)})`); });
+    const ti = idxOf(rot); items.forEach((it, i) => { it.b.classList.toggle('on', i === ti); it.t.classList.toggle('on', i === ti); });
+    if (ti !== topIdx) { topIdx = ti; buzz(3); }
+    R.ptxt.textContent = DIGITS[ti];
+  };
+  const snap = () => { const target = Math.round(rot / 36) * 36, from = rot, t0 = performance.now(); (function s(now) { const p = clamp((now - t0) / 160, 0, 1); rot = from + (target - from) * p; paint(); if (p < 1) raf = requestAnimationFrame(s); })(t0); };
+  const mom = () => { if (down) return; rot += vel / 60; vel *= 0.93; paint(); if (Math.abs(vel) > 30) raf = requestAnimationFrame(mom); else snap(); };
+  const ang = (e) => R.polar(e).a;
+  R.svg.onpointerdown = (e) => {
+    const p = R.polar(e);
+    if (p.r < 46) { c.push(DIGITS[topIdx]); buzz([10, 20, 10]); R.puck.style.transform = 'scale(.92)'; clearTimeout(holdT); holdT = setTimeout(() => { rep = setInterval(() => { c.push(DIGITS[topIdx]); buzz(4); }, 140); }, 450); R.svg.setPointerCapture(e.pointerId); R.svg.dataset.btn = '1'; return; }
+    R.svg.setPointerCapture(e.pointerId); down = true; cancelAnimationFrame(raf); vel = 0; last = p.a; lt = performance.now();
+  };
+  R.svg.onpointermove = (e) => {
+    if (!down) return;
+    const a = ang(e), d = wrapA(a - last), now = performance.now(), dt = Math.max(1, now - lt); last = a; lt = now;
+    rot += d; vel = vel * 0.6 + (d / dt) * 1000 * 0.4; paint();
+  };
+  R.svg.onpointerup = R.svg.onpointercancel = () => {
+    clearTimeout(holdT); clearInterval(rep); R.puck.style.transform = '';
+    if (R.svg.dataset.btn) { delete R.svg.dataset.btn; return; }
+    down = false; raf = requestAnimationFrame(mom);
+  };
+  paint();
+})();
+</script>
+</body>
+</html>
