@@ -126,7 +126,7 @@ export async function syncNow(): Promise<string> {
   const cur = useStore.getState()
   const data = {
     expenses: cur.expenses, water: cur.water, wlogs: cur.wlogs,
-    config: { budgets: cur.budgets, cats: cur.cats, waterGoal: cur.waterGoal, currency: cur.currency, lanes: cur.lanes.map((l) => ({ ...l, endAt: null, leftMs: null, idx: 0 })), workouts: cur.workouts, reminders: cur.reminders },
+    config: { navOrder: cur.navOrder, budgets: cur.budgets, cats: cur.cats, waterGoal: cur.waterGoal, currency: cur.currency, lanes: cur.lanes.map((l) => ({ ...l, endAt: null, leftMs: null, idx: 0 })), workouts: cur.workouts, reminders: cur.reminders },
   }
   await upsert('pulse-data.json', folder, JSON.stringify(data), 'application/json')
   await upsert('Pulse expenses', folder, expensesCsv(cur), 'text/csv', 'application/vnd.google-apps.spreadsheet')

@@ -345,11 +345,9 @@ function Report({ expenses, cats, currency, onDelete, onRepeat }: {
   const [selWeek, setSelWeek] = useState(wkStart(todayStart))
   const catOf = (id: string) => cats.find((c) => c.id === id) ?? { id, name: 'Other', icon: 'spark', color: '#999' }
   const money0 = (n: number) => currency + Math.round(n).toLocaleString('en-IN')
-  const compact = (n: number) => (n >= 100000 ? (n / 100000).toFixed(1).replace('.0', '') + 'L' : n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(Math.round(n)))
 
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => new Date(now.getFullYear(), now.getMonth() - i, 1).getTime()), [todayStart])
   const byDay = useMemo(() => { const m = new Map<number, number>(); for (const e of expenses) { const k = sod(e.ts); m.set(k, (m.get(k) ?? 0) + e.amount) } return m }, [expenses])
-  const monthTotal = (ms: number) => { const d = new Date(ms); let s = 0; for (let i = 1; i <= 31; i++) { const x = new Date(d.getFullYear(), d.getMonth(), i); if (x.getMonth() !== d.getMonth()) break; s += byDay.get(x.getTime()) ?? 0 } return s }
 
   // range the strips cover
   const rangeStart = month ?? addDays(todayStart, -29)
@@ -401,9 +399,9 @@ function Report({ expenses, cats, currency, onDelete, onRepeat }: {
         <Seg value={scope} onChange={setScope} options={[{ v: 'day', label: 'Days' }, { v: 'week', label: 'Weeks' }]} />
         <div className="chips mchips" ref={dragScroll}>
           <button className={`chip mchip${month === null ? ' on' : ''}`} onClick={() => pickMonth(null)}>Recent</button>
-          {months.map((m) => { const v = monthTotal(m); return (
+          {months.map((m) => { return (
             <button key={m} className={`chip mchip${month === m ? ' on' : ''}`} onClick={() => pickMonth(m)}>
-              {new Date(m).toLocaleDateString(undefined, { month: 'short' })}{v > 0 && <small>{compact(v)}</small>}
+              {new Date(m).toLocaleDateString(undefined, { month: 'short' })}
             </button>
           ) })}
         </div>
@@ -588,7 +586,7 @@ export default function Spend() {
               <span className="hint" style={{ whiteSpace: 'nowrap' }}>{dtext && !date ? 'invalid date' : ''}</span>
             </div>
           )}
-          <button className="btn" style={{ marginTop: 'auto' }} onClick={() => { buzz(8); setStep(2) }}>Next → amount</button>
+          <button className="btn" style={{ marginTop: 'auto' }} onClick={() => { buzz(8); setStep(2) }}>Enter amount</button>
         </div>
 
         <div style={sb(2)} aria-hidden={step !== 2}>

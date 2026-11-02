@@ -9,15 +9,12 @@ import Settings from './zones/Settings'
 import { Icon } from './lib/icons'
 import { driveStatus, quietSync } from './lib/drive'
 
-const ZONES = [
-  { key: 'Spend', emoji: 'coin', title: 'Spend' },
-  { key: 'Water', emoji: 'drop', title: 'Hydrate' },
-  { key: 'Focus', emoji: 'timer', title: 'Focus' },
-  { key: 'Move', emoji: 'flame', title: 'Move' },
-]
+import { ZONES, fixOrder } from './lib/zones'
 
 export default function App() {
   const zone = useStore((s) => s.zone)
+  const order = fixOrder(useStore((s) => s.navOrder))
+  const pos = order.indexOf(zone)
   const patch = useStore((s) => s.patch)
   const [settings, setSettings] = useState(false)
   const ds = useSyncExternalStore(driveStatus.sub, driveStatus.get)
@@ -26,20 +23,21 @@ export default function App() {
   useEffect(() => { const i = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(i) }, [])
   const ago = (() => { if (!lastSync) return ''; const m = Math.floor((Date.now() - lastSync) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago` })()
   const go = (z: number) => { if (z !== zone && z >= 0 && z < 4) { buzz(8); patch({ zone: z }) } }
+  const goPos = (p: number) => { if (p >= 0 && p < 4) go(order[p]) }
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return
-      if (e.key >= '1' && e.key <= '4') go(Number(e.key) - 1)
-      if (e.key === 'ArrowRight' && e.altKey) go(zone + 1)
-      if (e.key === 'ArrowLeft' && e.altKey) go(zone - 1)
+      if (e.key >= '1' && e.key <= '4') goPos(Number(e.key) - 1)
+      if (e.key === 'ArrowRight' && e.altKey) goPos(pos + 1)
+      if (e.key === 'ArrowLeft' && e.altKey) goPos(pos - 1)
     }
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
   })
 
   // scrub along the dock to switch zones
   const scrub = (_: unknown, i: PanInfo) => {
-    if (Math.abs(i.offset.x) > 40) go(zone + (i.offset.x < 0 ? 1 : -1))
+    if (Math.abs(i.offset.x) > 40) goPos(pos + (i.offset.x < 0 ? 1 : -1))
   }
 
   return (
@@ -47,8 +45,8 @@ export default function App() {
       <div className="glow" />
       <nav className="rail">
         <div className="logo">PULSE</div>
-        {ZONES.map((z, i) => (
-          <button key={z.key} className={i === zone ? 'on' : ''} onClick={() => go(i)}><b><Icon name={z.emoji} size={23} /></b>{z.title}</button>
+        {order.map((i) => (
+          <button key={ZONES[i].key} className={i === zone ? 'on' : ''} onClick={() => go(i)}><b><Icon name={ZONES[i].emoji} size={23} /></b>{ZONES[i].title}</button>
         ))}
         <div className="sp" />
         <button onClick={() => setSettings(true)}><b><Icon name="gear" size={23} /></b>Setup</button>
@@ -76,9 +74,9 @@ export default function App() {
         </motion.div>
 
         <motion.nav className="dock" onPanEnd={scrub}>
-          <motion.div className="pill" animate={{ left: `calc(${zone * 25}% + 3px)` }} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
-          {ZONES.map((z, i) => (
-            <button key={z.key} className={i === zone ? 'on' : ''} onClick={() => go(i)}><b><Icon name={z.emoji} size={23} /></b>{z.key}</button>
+          <motion.div className="pill" animate={{ left: `calc(${pos * 25}% + 3px)` }} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+          {order.map((i) => (
+            <button key={ZONES[i].key} className={i === zone ? 'on' : ''} onClick={() => go(i)}><b><Icon name={ZONES[i].emoji} size={23} /></b>{ZONES[i].key}</button>
           ))}
         </motion.nav>
       </div>

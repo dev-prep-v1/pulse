@@ -1,10 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, Reorder, useDragControls } from 'framer-motion'
 import { useStore, uid, buzz, DEFAULT_BLOCK_SOUNDS, type Reminder, type BlockKind } from '../store'
 import { Sheet, Seg, Stepper, Switch } from '../lib/ui'
 import { Icon } from '../lib/icons'
 import { askPermission, notify, addSound, removeSound, playSound, speak, BUILTIN, REMINDER_SOUND, soundName } from '../lib/alerts'
 import { syncNow, expensesCsv } from '../lib/drive'
+import { ZONES, fixOrder } from '../lib/zones'
+
+function NavItem({ z }: { z: number }) {
+  const controls = useDragControls()
+  return (
+    <Reorder.Item value={z} dragListener={false} dragControls={controls} className="blk" style={{ marginBottom: 8, padding: '8px 10px' }}>
+      <div className="row" style={{ gap: 10 }}>
+        <span onPointerDown={(e) => controls.start(e)} style={{ cursor: 'grab', touchAction: 'none', padding: '8px 2px', color: 'var(--mute)' }}><Icon name="grip" stroke={3} /></span>
+        <Icon name={ZONES[z].emoji} size={22} />
+        <b style={{ flex: 1 }}>{ZONES[z].title}</b>
+      </div>
+    </Reorder.Item>
+  )
+}
+
+function NavOrder() {
+  const { navOrder, patch } = useStore()
+  const order = fixOrder(navOrder)
+  return (
+    <Reorder.Group axis="y" values={order} onReorder={(o) => { buzz(6); patch({ navOrder: o }) }} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+      {order.map((z) => <NavItem key={z} z={z} />)}
+    </Reorder.Group>
+  )
+}
 
 const KIND_ICON: Record<Reminder['kind'], string> = { expense: 'coin', water: 'drop', focus: 'timer', workout: 'dumbbell' }
 const KIND_OPTS = (Object.keys(KIND_ICON) as Reminder['kind'][]).map((k) => ({ v: k, label: <Icon name={KIND_ICON[k]} size={18} /> }))
@@ -164,6 +188,9 @@ export default function Settings({ onClose }: { onClose: () => void }) {
           <Icon name="bell" size={15} style={{ marginRight: 6, verticalAlign: -3 }} />{perm === 'granted' ? 'Test notification' : 'Allow notifications'}
         </button>
       </div>
+
+      <div className="eyebrow sec">Navigation order</div>
+      <NavOrder />
 
       <div className="eyebrow sec">Voice</div>
       <VoicePicker />

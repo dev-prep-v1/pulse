@@ -50,6 +50,7 @@ export type State = {
   budgets: Record<string, number>
   cats: Cat[]; customSounds: Sound[]; blockSounds: Record<BlockKind, string>
   zone: number
+  navOrder: number[]
   addExpense: (e: Omit<Expense, 'id' | 'ts'> & { ts?: number }) => void
   delExpense: (id: string) => void
   addWater: (ml: number) => void
@@ -90,7 +91,7 @@ export const useStore = create<State>()(
         { id: uid(), kind: 'water', label: 'Drink water', sound: 'drip', mode: 'every', at: '10:00', every: 60, from: '09:00', to: '21:00', enabled: true },
         { id: uid(), kind: 'workout', label: 'Workout time', sound: 'alarm', mode: 'at', at: '18:00', every: 60, from: '09:00', to: '22:00', enabled: false },
       ],
-      driveClientId: '', lastSync: 0, zone: 0,
+      driveClientId: '', lastSync: 0, zone: 0, navOrder: [0, 1, 2, 3],
       voiceOn: true, voice: '', voiceRate: 1,
       budgets: {},
       cats: DEFAULT_CATS, customSounds: [], blockSounds: DEFAULT_BLOCK_SOUNDS,
