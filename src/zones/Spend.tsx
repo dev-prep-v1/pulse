@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useAnimationControls, useMotionValue, useTransform, animate } from 'framer-motion'
 import { useStore, buzz, startOfDay, fmtMoney, uid, monthKey, type Cat } from '../store'
-import { SwipeRow, useHold, Sheet, Switch } from '../lib/ui'
+import { SwipeRow, useHold, Sheet, Switch, Seg } from '../lib/ui'
 import { Icon, Badge, PICK_ICONS, PALETTE } from '../lib/icons'
 
 const MAX = 999999
@@ -137,14 +137,22 @@ function SlideToLog({ onDone, ready }: { onDone: () => void; ready: boolean }) {
   )
 }
 
-function CatTile({ cat, on, onPick, onEdit }: { cat: Cat; on: boolean; onPick: () => void; onEdit: () => void }) {
+function CatTile({ cat, on, onPick, onEdit, manage, onRemove }: { cat: Cat; on: boolean; onPick: () => void; onEdit: () => void; manage: boolean; onRemove: () => void }) {
   const hold = useHold(onEdit, 550)
   return (
-    <motion.button whileTap={{ scale: 0.92 }} className={'tile' + (on ? ' on' : '')} style={{ ['--c' as string]: cat.color }} {...hold.bind}
-      onClick={() => { if (!hold.fired.current) { buzz(8); onPick() } }}>
-      <Badge icon={cat.icon} color={cat.color} />
-      <span className="n">{cat.name}</span>
-    </motion.button>
+    <div style={{ position: 'relative', minWidth: 0, display: 'grid' }}>
+      <motion.button whileTap={{ scale: 0.92 }} className={'tile' + (on && !manage ? ' on' : '')} style={{ ['--c' as string]: cat.color }} {...hold.bind}
+        animate={manage ? { rotate: [0, -2.2, 2.2, 0] } : { rotate: 0 }} transition={manage ? { repeat: Infinity, duration: 0.45 } : undefined}
+        onClick={() => { if (hold.fired.current) return; buzz(8); if (manage) onEdit(); else onPick() }}>
+        <Badge icon={cat.icon} color={cat.color} />
+        <span className="n">{cat.name}</span>
+      </motion.button>
+      {manage && (
+        <motion.button className="tile-x" initial={{ scale: 0 }} animate={{ scale: 1 }} aria-label={`Remove ${cat.name}`} onClick={() => { buzz([10, 30, 10]); onRemove() }}>
+          <Icon name="close" size={12} stroke={3} />
+        </motion.button>
+      )}
+    </div>
   )
 }
 
@@ -183,7 +191,6 @@ function CatSheet({ cat, onClose, onSaved }: { cat: Cat | null; onClose: () => v
       <div className="row" style={{ marginTop: 16 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700 }}>Personal spending</div>
-          <div className="hint" style={{ textAlign: 'left' }}>Counts toward your monthly limit</div>
         </div>
         <Switch on={personal} onChange={setPersonal} />
       </div>
@@ -219,7 +226,6 @@ function BudgetSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
       <h2 style={{ margin: '0 0 2px' }}>{month} limit</h2>
-      <div className="hint" style={{ textAlign: 'left', marginBottom: 12 }}>How much can you spend on personal things this month?</div>
       <div className="row">
         <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--a)' }}>{currency}</span>
         <input className="field" autoFocus inputMode="numeric" placeholder="e.g. 5000" style={{ fontSize: 24, fontWeight: 800 }} value={limit}
@@ -249,7 +255,6 @@ function BudgetCard({ limit, spentMonth, spentToday, daysLeft, hasPersonal, curr
         <Badge icon="wallet" color="var(--a)" size={46} />
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800 }}>Set your {month} personal limit</div>
-          <div className="hint" style={{ textAlign: 'left' }}>See what’s left each month and per day.</div>
         </div>
         <Icon name="plus" />
       </button>
@@ -288,12 +293,174 @@ function BudgetCard({ limit, spentMonth, spentToday, daysLeft, hasPersonal, curr
   )
 }
 
+/* Scrub strip: bars you can tap or slide a finger across to pick one. */
+function Strip({ vals, labels, sel, onSel }: { vals: number[]; labels: string[]; sel: number; onSel: (i: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const down = useRef(false)
+  const max = Math.max(1, ...vals)
+  const pick = (e: React.PointerEvent) => {
+    const r = ref.current!.getBoundingClientRect()
+    const i = Math.max(0, Math.min(vals.length - 1, Math.floor(((e.clientX - r.left) / r.width) * vals.length)))
+    if (i !== sel) { buzz(3); onSel(i) }
+  }
+  return (
+    <div ref={ref} className="strip" onPointerDown={(e) => { down.current = true; e.currentTarget.setPointerCapture(e.pointerId); pick(e) }}
+      onPointerMove={(e) => down.current && pick(e)} onPointerUp={() => (down.current = false)} onPointerCancel={() => (down.current = false)}>
+      {vals.map((v, i) => (
+        <div key={i} className="scol">
+          <motion.div className={'sbar' + (i === sel ? ' on' : '') + (v ? '' : ' z')} animate={{ height: Math.max(4, (v / max) * 72) }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
+          <span className={'slab' + (i === sel ? ' on' : '')}>{labels[i]}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const sod = (ts: number) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime() }
+
+/* Lets a mouse drag the month row sideways; touch scrolls natively. */
+function dragScroll(el: HTMLDivElement | null) {
+  if (!el || (el as HTMLDivElement & { _d?: boolean })._d) return
+  ;(el as HTMLDivElement & { _d?: boolean })._d = true
+  let x0 = 0, s0 = 0, on = false, moved = false
+  el.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') return; on = true; moved = false; x0 = e.clientX; s0 = el.scrollLeft })
+  window.addEventListener('pointermove', (e) => { if (!on) return; const d = e.clientX - x0; if (Math.abs(d) > 4) moved = true; el.scrollLeft = s0 - d })
+  window.addEventListener('pointerup', () => { on = false })
+  el.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false } }, true)
+}
+
+const wkStart = (ts: number) => { const d = new Date(sod(ts)); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime() }
+const addDays = (ts: number, n: number) => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime() }
+
+/* Days / weeks report. A month chip row narrows both views to one calendar month. */
+function Report({ expenses, cats, currency, onDelete, onRepeat }: {
+  expenses: { id: string; amount: number; cat: string; note: string; ts: number }[]; cats: Cat[]; currency: string
+  onDelete: (id: string) => void; onRepeat: (e: { amount: number; cat: string; note: string }) => void
+}) {
+  const [scope, setScope] = useState<'day' | 'week'>('day')
+  const [month, setMonth] = useState<number | null>(null) // month start ts, null = recent
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const [selDay, setSelDay] = useState(todayStart)
+  const [selWeek, setSelWeek] = useState(wkStart(todayStart))
+  const catOf = (id: string) => cats.find((c) => c.id === id) ?? { id, name: 'Other', icon: 'spark', color: '#999' }
+  const money0 = (n: number) => currency + Math.round(n).toLocaleString('en-IN')
+  const compact = (n: number) => (n >= 100000 ? (n / 100000).toFixed(1).replace('.0', '') + 'L' : n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(Math.round(n)))
+
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => new Date(now.getFullYear(), now.getMonth() - i, 1).getTime()), [todayStart])
+  const byDay = useMemo(() => { const m = new Map<number, number>(); for (const e of expenses) { const k = sod(e.ts); m.set(k, (m.get(k) ?? 0) + e.amount) } return m }, [expenses])
+  const monthTotal = (ms: number) => { const d = new Date(ms); let s = 0; for (let i = 1; i <= 31; i++) { const x = new Date(d.getFullYear(), d.getMonth(), i); if (x.getMonth() !== d.getMonth()) break; s += byDay.get(x.getTime()) ?? 0 } return s }
+
+  // range the strips cover
+  const rangeStart = month ?? addDays(todayStart, -29)
+  const rangeEnd = month ? Math.min(new Date(new Date(month).getFullYear(), new Date(month).getMonth() + 1, 0).getTime(), todayStart) : todayStart
+  const days = useMemo(() => { const out: number[] = []; for (let d = rangeStart; d <= rangeEnd; d = addDays(d, 1)) out.push(d); return out }, [rangeStart, rangeEnd])
+  const weeks = useMemo(() => {
+    if (!month) return Array.from({ length: 12 }, (_, i) => addDays(wkStart(todayStart), -7 * (11 - i)))
+    const out: number[] = []; for (let w = wkStart(rangeStart); w <= rangeEnd; w = addDays(w, 7)) out.push(w); return out
+  }, [month, rangeStart, rangeEnd, todayStart])
+  const weekTotal = (w: number) => { let s = 0; for (let i = 0; i < 7; i++) { const d = addDays(w, i); if (d >= rangeStart && d <= rangeEnd) s += byDay.get(d) ?? 0 } return s }
+  const rangeTotal = days.reduce((a, d) => a + (byDay.get(d) ?? 0), 0)
+
+  const day = days.includes(selDay) ? selDay : days[days.length - 1]
+  const week = weeks.includes(selWeek) ? selWeek : weeks[weeks.length - 1]
+  const dayIdx = days.indexOf(day), weekIdx = weeks.indexOf(week)
+  const dayEntries = expenses.filter((e) => sod(e.ts) === day).sort((a, b) => b.ts - a.ts)
+  const weekEnd = addDays(week, 6)
+  const weekGroups = useMemo(() => {
+    const m = new Map<number, typeof expenses>()
+    for (const e of expenses) { const k = sod(e.ts); if (k >= week && k <= weekEnd && k >= rangeStart && k <= rangeEnd) { const l = m.get(k) ?? []; l.push(e); m.set(k, l) } }
+    return [...m.entries()].sort((a, b) => b[0] - a[0]).map(([k, l]) => [k, l.sort((a, b) => b.ts - a.ts)] as const)
+  }, [expenses, week, rangeStart, rangeEnd])
+
+  const dayLabel = (ts: number) => ts === todayStart ? 'Today' : ts === addDays(todayStart, -1) ? 'Yesterday' : new Date(ts).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+  const short = (ts: number) => new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  const dLabels = days.map((d, i) => (month ? (new Date(d).getDate() - 1) % 7 === 0 : (days.length - 1 - i) % 7 === 0) ? String(new Date(d).getDate()) : '')
+  const wLabels = weeks.map((w, i) => (weeks.length <= 6 || (weeks.length - 1 - i) % 2 === 0) ? String(new Date(w).getDate()) : '')
+  const rangeName = month ? new Date(month).toLocaleDateString(undefined, { month: 'short' }) : scope === 'day' ? '30-day' : '12-week'
+
+  const row = (e: typeof dayEntries[number]) => {
+    const c = catOf(e.cat)
+    return (
+      <SwipeRow key={e.id} onLeft={() => onDelete(e.id)} onRight={() => onRepeat({ amount: e.amount, cat: e.cat, note: e.note })}>
+        <Badge icon={c.icon} color={c.color} size={40} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.note || c.name}</div>
+          <div className="hint" style={{ textAlign: 'left' }}>{c.name} · {new Date(e.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+        <div style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(e.amount, currency)}</div>
+      </SwipeRow>
+    )
+  }
+
+  const pickMonth = (m: number | null) => { buzz(6); setMonth(m) }
+
+  return (
+    <div>
+      <div className="card" style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        <Seg value={scope} onChange={setScope} options={[{ v: 'day', label: 'Days' }, { v: 'week', label: 'Weeks' }]} />
+        <div className="chips mchips" ref={dragScroll}>
+          <button className={`chip mchip${month === null ? ' on' : ''}`} onClick={() => pickMonth(null)}>Recent</button>
+          {months.map((m) => { const v = monthTotal(m); return (
+            <button key={m} className={`chip mchip${month === m ? ' on' : ''}`} onClick={() => pickMonth(m)}>
+              {new Date(m).toLocaleDateString(undefined, { month: 'short' })}{v > 0 && <small>{compact(v)}</small>}
+            </button>
+          ) })}
+        </div>
+        {scope === 'day' ? (<>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
+            <div key={day} className="rpop" style={{ minWidth: 0 }}>
+              <div className="eyebrow">{dayLabel(day)}</div>
+              <div className="big" style={{ fontSize: 42, color: 'var(--a)' }}>{money0(byDay.get(day) ?? 0)}</div>
+            </div>
+            <div className="sp" />
+            <div style={{ textAlign: 'right' }}>
+              <div className="eyebrow">{rangeName} total</div>
+              <div style={{ fontSize: 20, fontWeight: 800 }}>{money0(rangeTotal)}</div>
+            </div>
+          </div>
+          <Strip vals={days.map((d) => byDay.get(d) ?? 0)} labels={dLabels} sel={dayIdx} onSel={(i) => setSelDay(days[i])} />
+        </>) : (<>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
+            <div key={week} className="rpop" style={{ minWidth: 0 }}>
+              <div className="eyebrow">{short(Math.max(week, rangeStart))} – {short(Math.min(weekEnd, rangeEnd))}</div>
+              <div className="big" style={{ fontSize: 42, color: 'var(--a)' }}>{money0(weekTotal(week))}</div>
+            </div>
+            <div className="sp" />
+            <div style={{ textAlign: 'right' }}>
+              <div className="eyebrow">{rangeName} total</div>
+              <div style={{ fontSize: 20, fontWeight: 800 }}>{money0(weeks.reduce((a, w) => a + weekTotal(w), 0))}</div>
+            </div>
+          </div>
+          <Strip vals={weeks.map(weekTotal)} labels={wLabels} sel={weekIdx} onSel={(i) => setSelWeek(weeks[i])} />
+        </>)}
+      </div>
+
+      {scope === 'day' ? (<>
+        {dayEntries.length === 0 && <div className="hint" style={{ padding: '14px 4px' }}>Nothing on this day.</div>}
+        <div style={{ marginTop: 10 }}>{dayEntries.map(row)}</div>
+      </>) : (<>
+        {weekGroups.length === 0 && <div className="hint" style={{ padding: '14px 4px' }}>Nothing this week.</div>}
+        {weekGroups.map(([k, list]) => (
+          <div key={k}>
+            <button className="daygroup" onClick={() => { buzz(8); setSelDay(k); setScope('day') }}>
+              <span>{dayLabel(k)}</span><b>{money0(byDay.get(k) ?? 0)}</b>
+            </button>
+            {list.map(row)}
+          </div>
+        ))}
+      </>)}
+    </div>
+  )
+}
+
 export default function Spend() {
-  const { expenses, currency, cats, budgets, addExpense, delExpense } = useStore()
+  const { expenses, currency, cats, budgets, addExpense, delExpense, patch } = useStore()
   const [amt, setAmt] = useState(0)
   const [cat, setCat] = useState(cats[0]?.id ?? '')
   const [note, setNote] = useState('')
   const [step, setStep] = useState<1 | 2>(1)
+  const [manage, setManage] = useState(false)
   const [typing, setTyping] = useState(false)
   const [dtext, setDtext] = useState('')
   const [date, setDate] = useState('') // yyyy-mm-dd, '' = today
@@ -367,19 +534,9 @@ export default function Spend() {
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
   }, [])
 
-  const byTs = (a: { ts: number }, b: { ts: number }) => b.ts - a.ts
-  const today = expenses.filter((e) => e.ts >= day0).sort(byTs)
-  const earlier = expenses.filter((e) => e.ts < day0 && e.ts >= day0 - 6 * 864e5).sort(byTs)
   const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const yest = ymd(new Date(day0 - 864e5)), todayStr = ymd(new Date())
   const pickedLabel = date && date !== yest && date !== todayStr ? new Date(date + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : ''
-  const todayTotal = today.reduce((a, e) => a + e.amount, 0)
-  const monthTotal = useMemo(() => expenses.filter((e) => e.ts >= m0).reduce((a, e) => a + e.amount, 0), [expenses, m0])
-  const week = useMemo(() => Array.from({ length: 7 }, (_, i) => {
-    const s = day0 - (6 - i) * 864e5
-    return { s, v: expenses.filter((e) => e.ts >= s && e.ts < s + 864e5).reduce((a, e) => a + e.amount, 0) }
-  }), [expenses, day0])
-  const max = Math.max(1, ...week.map((w) => w.v))
   const selected = catOf(cat)
   // both steps share one grid cell so the card keeps the same height on either step
   const sb = (n: number): React.CSSProperties => ({ gridArea: '1 / 1', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0, visibility: step === n ? 'visible' : 'hidden', pointerEvents: step === n ? 'auto' : 'none' })
@@ -397,9 +554,14 @@ export default function Spend() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }}>
         <div style={sb(1)} aria-hidden={step !== 1}>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 6 }}>What was it? <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600 }}>· hold to edit</span></div>
+            <div className="row" style={{ marginBottom: 6 }}>
+              <div className="eyebrow">What was it?</div>
+              <div className="sp" />
+              <button className={`chip${manage ? ' on' : ''}`} style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => { buzz(6); setManage((m) => !m) }}>{manage ? 'Done' : 'Manage'}</button>
+            </div>
             <div className="cats">
-              {cats.map((c) => <CatTile key={c.id} cat={c} on={c.id === cat} onPick={() => setCat(c.id)} onEdit={() => setEdit(c)} />)}
+              {cats.map((c) => <CatTile key={c.id} cat={c} on={c.id === cat} manage={manage} onPick={() => setCat(c.id)} onEdit={() => setEdit(c)}
+                onRemove={() => { const rest = cats.filter((x) => x.id !== c.id); patch({ cats: rest }); if (c.id === cat) setCat(rest[0]?.id ?? '') }} />)}
               <button className="tile add" onClick={() => setEdit('new')}><span className="dash"><Icon name="plus" /></span><span className="n">New</span></button>
             </div>
           </div>
@@ -423,7 +585,7 @@ export default function Spend() {
                   if (yy && dt.getDate() === dd && dt.getMonth() === mm - 1 && dt.getTime() <= Date.now()) setDate(ymd(dt) === todayStr ? '' : ymd(dt))
                   else setDate('')
                 }} />
-              <span className="hint" style={{ whiteSpace: 'nowrap' }}>{dtext && !date ? 'invalid date' : 'DD/MM = this year'}</span>
+              <span className="hint" style={{ whiteSpace: 'nowrap' }}>{dtext && !date ? 'invalid date' : ''}</span>
             </div>
           )}
           <button className="btn" style={{ marginTop: 'auto' }} onClick={() => { buzz(8); setStep(2) }}>Next → amount</button>
@@ -454,52 +616,7 @@ export default function Spend() {
         </div>
       </motion.div>
 
-      <div>
-        <div className="card">
-          <div className="row" style={{ alignItems: 'flex-end' }}>
-            <div>
-              <div className="eyebrow">Today</div>
-              <div className="big" style={{ fontSize: 40, color: 'var(--a)' }}>{fmtMoney(todayTotal, currency)}</div>
-            </div>
-            <div className="sp" />
-            <div style={{ textAlign: 'right' }}>
-              <div className="eyebrow">This month</div>
-              <div style={{ fontSize: 20, fontWeight: 800 }}>{fmtMoney(monthTotal, currency)}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 64, marginTop: 16 }}>
-            {week.map((w, i) => (
-              <div key={w.s} style={{ flex: 1, textAlign: 'center' }}>
-                <motion.div initial={{ height: 0 }} animate={{ height: Math.max(4, (w.v / max) * 48) }} style={{ background: i === 6 ? 'var(--a)' : 'var(--line)', borderRadius: 6 }} />
-                <div className="hint" style={{ fontSize: 10, marginTop: 4 }}>{new Date(w.s).toLocaleDateString(undefined, { weekday: 'narrow' })}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="sec eyebrow">Today · swipe ← delete · swipe → repeat</div>
-        {today.length === 0 && <div className="hint" style={{ padding: '8px 4px' }}>Nothing logged yet.</div>}
-        {(() => {
-          const row = (e: typeof today[number], withDay: boolean) => {
-            const c = catOf(e.cat)
-            return (
-              <SwipeRow key={e.id} onLeft={() => delExpense(e.id)} onRight={() => addExpense({ amount: e.amount, cat: e.cat, note: e.note })}>
-                <Badge icon={c.icon} color={c.color} size={40} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.note || c.name}</div>
-                  <div className="hint" style={{ textAlign: 'left' }}>{c.name} · {withDay ? new Date(e.ts).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) : new Date(e.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                </div>
-                <div style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmtMoney(e.amount, currency)}</div>
-              </SwipeRow>
-            )
-          }
-          return (<>
-            {today.map((e) => row(e, false))}
-            {earlier.length > 0 && <div className="sec eyebrow">Earlier this week</div>}
-            {earlier.map((e) => row(e, true))}
-          </>)
-        })()}
-      </div>
+      <Report expenses={expenses} cats={cats} currency={currency} onDelete={delExpense} onRepeat={(e) => addExpense(e)} />
 
       <AnimatePresence>
         {toast && (

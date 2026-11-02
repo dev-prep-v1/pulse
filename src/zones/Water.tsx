@@ -64,11 +64,10 @@ export default function Water() {
           <div className="hint">Daily goal <b style={{ color: 'var(--a)' }}>{waterGoal} ml</b></div>
           <button className="icon-btn" onClick={() => patch({ waterGoal: waterGoal + 250 })}><Icon name="plus" size={16} /></button>
         </div>
-        <div className="hint" style={{ marginTop: 10 }}>Set sip reminders and your own alarm sound in ⚙️ Setup.</div>
       </div>
 
       <div>
-        <div className="eyebrow sec">Today · swipe ← to undo</div>
+        <div className="eyebrow sec">Today</div>
         {today.length === 0 && <div className="hint">No sips yet.</div>}
         {today.map((w) => (
           <SwipeRow key={w.id} onLeft={() => delWater(w.id)}>

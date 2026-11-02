@@ -49,10 +49,10 @@ export default function Workout() {
           </div>
           {streak > 0 && <div className="chip on"><Icon name="flame" size={15} /> {streak}d</div>}
         </div>
-        <div className="hint">{day.exercises.length} exercises × {day.rounds} rounds · swipe card for other days</div>
+        <div className="hint">{day.exercises.length} exercises × {day.rounds} rounds</div>
 
         <div style={{ marginTop: 14 }}>
-          {day.exercises.length === 0 && <div className="hint" style={{ padding: '14px 0' }}>Rest day, or add some exercises ↓</div>}
+          {day.exercises.length === 0 && <div className="hint" style={{ padding: '14px 0' }}>Rest day</div>}
           <Reorder.Group axis="y" values={day.exercises} onReorder={setEx} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {day.exercises.map((e, i) => (
               <ExRow key={e.id} e={e} i={i} edit={edit} upd={(p) => upd(e.id, p)} del={() => setEx(day.exercises.filter((x) => x.id !== e.id))} />
@@ -174,7 +174,7 @@ function Runner({ day, onExit }: { day: WorkoutDay; onExit: () => void }) {
                 <motion.div
                   drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0.7, bottom: 0 }} style={{ touchAction: 'none', margin: '22px auto', width: 240, height: 240, borderRadius: '50%', background: 'var(--card)', border: '2px dashed var(--a)', display: 'grid', placeItems: 'center', cursor: 'grab' }}
                   onDragEnd={(_, p) => { if (p.offset.y < -80) finishSet() }}>
-                  <div><div className="big" style={{ fontSize: 96, color: 'var(--a)' }}>{step.ex.target}</div><div className="eyebrow" style={{ marginTop: 2 }}>reps</div><div className="hint" style={{ fontSize: 11, marginTop: 6 }}>flick up when done ↑</div></div>
+                  <div><div className="big" style={{ fontSize: 96, color: 'var(--a)' }}>{step.ex.target}</div><div className="eyebrow" style={{ marginTop: 2 }}>reps</div></div>
                 </motion.div>
               )}
             </div>

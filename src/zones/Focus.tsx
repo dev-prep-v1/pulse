@@ -123,11 +123,10 @@ function LaneCard({ lane }: { lane: Lane }) {
             <div style={{ color: kind.c, display: 'grid', placeItems: 'center' }}><Icon name={kind.icon} size={28} /></div>
             <div className="big" style={{ fontSize: 46 }}>{mmss(left)}</div>
             <div style={{ fontWeight: 700, marginTop: 4, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b?.label}</div>
-            <div className="hint">{running ? 'tap to pause' : 'tap to start'}</div>
           </div>
         </div>
       </motion.div>
-      <div className="hint" style={{ textAlign: 'center' }}>Swipe ring ‹ prev / next › · hold to reset {next && <> · up next: <b>{next.label}</b></>}</div>
+      {next && <div className="hint" style={{ textAlign: 'center' }}>Up next: <b>{next.label}</b></div>}
 
       <div className="row" style={{ marginTop: 14, gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
         {lane.blocks.map((x, i) => (
@@ -145,7 +144,6 @@ function LaneCard({ lane }: { lane: Lane }) {
             ))}
           </Reorder.Group>
           <button className="btn ghost sm" onClick={() => setBlocks([...lane.blocks, { id: uid(), kind: 'work', label: 'Block', mins: 25 }])}><Icon name="plus" size={14} /> Add block</button>
-          <div className="hint" style={{ marginTop: 8 }}>Drag the dots to reorder. The flow loops: e.g. 30 focus → 5 rest → 5 push-ups → repeat. Each block type has its own alert sound in Setup.</div>
         </div>
       )}
     </div>

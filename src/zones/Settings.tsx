@@ -86,7 +86,6 @@ function VoicePicker() {
             {voices.length === 0 && <div className="hint">No voices reported by this browser.</div>}
           </div>
           <button className="chip" style={{ justifySelf: 'start' }} onClick={() => setAll(!all)}>{all ? 'Only my language' : 'Show all languages'}</button>
-          <div className="hint">Tap a voice to hear it. Voices come from your phone or computer, so the list differs per device; the downloaded “Enhanced/Premium” ones in system settings sound best.</div>
         </>
       )}
     </div>
@@ -146,7 +145,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       <h2 style={{ margin: '0 0 2px' }}>Setup</h2>
 
       <div className="eyebrow sec">Reminders</div>
-      {s.reminders.length === 0 && <div className="hint">No reminders yet. Add a ready-made one below.</div>}
+      {s.reminders.length === 0 && <div className="hint">No reminders yet.</div>}
       {s.reminders.map((r) => (
         <ReminderCard key={r.id} r={r} onChange={(p) => upd(r.id, p)} onDelete={() => s.setReminders(s.reminders.filter((x) => x.id !== r.id))} />
       ))}
@@ -164,9 +163,6 @@ export default function Settings({ onClose }: { onClose: () => void }) {
         <button className="btn ghost sm" onClick={async () => { const p = await askPermission(); setMsg('Notifications: ' + p); if (p === 'granted') notify('Pulse', 'Notifications work', undefined, 'chime') }}>
           <Icon name="bell" size={15} style={{ marginRight: 6, verticalAlign: -3 }} />{perm === 'granted' ? 'Test notification' : 'Allow notifications'}
         </button>
-      </div>
-      <div className="hint" style={{ marginTop: 8 }}>
-        Browsers only fire reminders while Pulse is open or running in the background. For guaranteed delivery with the app fully closed we’ll add push or wrap it as a native app later.
       </div>
 
       <div className="eyebrow sec">Voice</div>
@@ -203,8 +199,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
         <button className="btn ghost sm" onClick={download}>Export CSV</button>
       </div>
       <div className="hint" style={{ marginTop: 8 }}>
-        {s.lastSync ? `Last sync ${new Date(s.lastSync).toLocaleString()}. ` : ''}Creates a “Pulse” folder in your Drive with a backup, an expenses Google Sheet and your sounds. Data is always saved on-device first, so it works offline and syncs when you’re back online.
-        Create the Client ID in Google Cloud Console → Credentials → OAuth client (Web), enable the Drive API, and add this site’s URL under Authorized JavaScript origins.
+        {s.lastSync ? `Last sync ${new Date(s.lastSync).toLocaleString()}` : 'Not synced yet'}
       </div>
       {msg && <div className="hint" style={{ marginTop: 8, color: 'var(--a)' }}>{msg}</div>}
     </Sheet>

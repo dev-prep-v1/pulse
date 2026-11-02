@@ -168,3 +168,30 @@ input, select, textarea { font: inherit; color: inherit; -webkit-user-select: te
 @keyframes throb { to { transform: scale(1.05); } }
 .amtnum { transform-origin: left center; }
 .sumcard .bignum { transform-origin: center; }
+
+.tile-x { position: absolute; top: -2px; right: 2px; width: 22px; height: 22px; border-radius: 50%; background: #ff4d4d; color: #fff; display: grid; place-items: center; box-shadow: 0 3px 10px rgba(255,60,60,.5); z-index: 2; }
+
+.strip { display: flex; align-items: flex-end; gap: 3px; height: 108px; touch-action: pan-y; user-select: none; cursor: pointer; }
+.scol { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 6px; }
+.sbar { width: 100%; max-width: 22px; border-radius: 6px; background: var(--line); }
+.sbar.z { opacity: .55; }
+.sbar.on { background: var(--a); box-shadow: 0 0 16px color-mix(in srgb, var(--a) 70%, transparent); }
+.slab { font-size: 10px; height: 12px; color: var(--mute); font-weight: 700; white-space: nowrap; }
+.slab.on { color: var(--a); }
+.split { display: flex; gap: 3px; height: 14px; }
+.split i { flex-basis: 0; min-width: 4px; border-radius: 99px; }
+.catrow { display: flex; align-items: center; gap: 12px; padding: 10px 4px; width: 100%; color: var(--ink); }
+.catbar { height: 6px; border-radius: 9px; background: var(--line); margin-top: 6px; overflow: hidden; }
+.catbar i { display: block; height: 100%; border-radius: 9px; }
+.dayrow { border-top: 1px solid var(--line); }
+.rpop { animation: rpop .25s ease-out; }
+@keyframes rpop { 0% { transform: translateY(6px); opacity: .3; } 100% { transform: none; opacity: 1; } }
+
+.mchip { padding: 7px 12px; gap: 6px; font-size: 12.5px; }
+.mchip small { font-size: 10px; font-weight: 700; opacity: .65; }
+.mchip.on small { opacity: .85; }
+.daygroup { display: flex; justify-content: space-between; width: 100%; margin: 14px 0 6px; padding: 0 4px; color: var(--mute); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
+.daygroup b { color: var(--a); letter-spacing: 0; font-size: 13px; }
+
+.mchips { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; touch-action: pan-x; cursor: grab; -webkit-overflow-scrolling: touch; mask-image: linear-gradient(90deg, #000 88%, transparent); }
+.mchips::-webkit-scrollbar { display: none; width: 0; height: 0; }

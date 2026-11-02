@@ -13,3 +13,5 @@ autoSync()
 const go = () => { loadSounds(); createRoot(document.getElementById('root')!).render(<App />); startScheduler() }
 if (useStore.persist.hasHydrated()) go()
 else useStore.persist.onFinishHydration(go)
+
+if (import.meta.env.DEV) (window as unknown as { __store: typeof useStore }).__store = useStore
