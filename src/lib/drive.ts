@@ -22,8 +22,9 @@ function loadGsi() {
   })
 }
 
-/** Client ID from .env (VITE_GOOGLE_CLIENT_ID), falling back to the one typed in Settings. */
-export const clientIdOf = () => (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() || useStore.getState().driveClientId.trim()
+// Client IDs are public identifiers (not secrets), so the default ships in the bundle; the env var can override it.
+const DEFAULT_CLIENT_ID = '978213242169-bhvs51emj4sce7lasevq02h2d46vreud.apps.googleusercontent.com'
+export const clientIdOf = () => (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() || DEFAULT_CLIENT_ID || useStore.getState().driveClientId.trim()
 
 const LINK = 'pulse-drive-linked'
 const linked = () => { try { return localStorage.getItem(LINK) === '1' } catch { return false } }

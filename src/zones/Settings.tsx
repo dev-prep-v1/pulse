@@ -4,7 +4,7 @@ import { useStore, uid, buzz, DEFAULT_BLOCK_SOUNDS, type Reminder, type BlockKin
 import { Sheet, Seg, Stepper, Switch } from '../lib/ui'
 import { Icon } from '../lib/icons'
 import { askPermission, notify, addSound, removeSound, playSound, speak, BUILTIN, REMINDER_SOUND, soundName } from '../lib/alerts'
-import { syncNow, expensesCsv } from '../lib/drive'
+import { syncNow, expensesCsv, clientIdOf } from '../lib/drive'
 import { ZONES, fixOrder } from '../lib/zones'
 
 function NavItem({ z }: { z: number }) {
@@ -220,7 +220,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       <input className="field" style={{ width: 90 }} value={s.currency} onChange={(e) => s.patch({ currency: e.target.value })} />
 
       <div className="eyebrow sec">Google Drive</div>
-      {!import.meta.env.VITE_GOOGLE_CLIENT_ID && <input className="field" placeholder="Google OAuth Client ID (…apps.googleusercontent.com)" value={s.driveClientId} onChange={(e) => s.patch({ driveClientId: e.target.value })} />}
+      {!clientIdOf() && <input className="field" placeholder="Google OAuth Client ID (…apps.googleusercontent.com)" value={s.driveClientId} onChange={(e) => s.patch({ driveClientId: e.target.value })} />}
       <div className="row" style={{ marginTop: 8 }}>
         <button className="btn sm" disabled={busy} onClick={sync}><Icon name="cloud" size={15} style={{ marginRight: 6, verticalAlign: -3 }} />{busy ? 'Syncing…' : 'Connect & sync'}</button>
         <button className="btn ghost sm" onClick={download}>Export CSV</button>
