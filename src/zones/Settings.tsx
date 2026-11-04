@@ -4,7 +4,7 @@ import { useStore, uid, buzz, DEFAULT_BLOCK_SOUNDS, type Reminder, type BlockKin
 import { Sheet, Seg, Stepper, Switch } from '../lib/ui'
 import { Icon } from '../lib/icons'
 import { askPermission, notify, addSound, removeSound, playSound, speak, BUILTIN, REMINDER_SOUND, soundName } from '../lib/alerts'
-import { syncNow, expensesCsv, clientIdOf } from '../lib/drive'
+import { syncNow, expensesCsv, clientIdOf, restoreFromDrive } from '../lib/drive'
 import { ZONES, fixOrder } from '../lib/zones'
 
 function NavItem({ z }: { z: number }) {
@@ -224,6 +224,7 @@ export default function Settings({ onClose }: { onClose: () => void }) {
       <div className="row" style={{ marginTop: 8 }}>
         <button className="btn sm" disabled={busy} onClick={sync}><Icon name="cloud" size={15} style={{ marginRight: 6, verticalAlign: -3 }} />{busy ? 'Syncing…' : 'Connect & sync'}</button>
         <button className="btn ghost sm" onClick={download}>Export CSV</button>
+        <button className="btn ghost sm" disabled={busy} onClick={async () => { setBusy(true); setMsg(''); try { setMsg(await restoreFromDrive()) } catch (e) { setMsg((e as Error).message) } setBusy(false) }}>Restore</button>
       </div>
       <div className="hint" style={{ marginTop: 8 }}>
         {s.lastSync ? `Last sync ${new Date(s.lastSync).toLocaleString()}` : 'Not synced yet'}

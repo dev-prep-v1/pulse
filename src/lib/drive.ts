@@ -109,21 +109,26 @@ export function expensesCsv(s: State) {
   return rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
 }
 
-export async function syncNow(): Promise<string> {
-  const st = useStore.getState()
-  const folder = await findOrCreate('Pulse', 'application/vnd.google-apps.folder')
-  // pull + merge
+/** Manual only: bring entries back from the Drive backup. Adds what is missing locally, never removes anything. */
+export async function restoreFromDrive(): Promise<string> {
+  await findOrCreate('Pulse', 'application/vnd.google-apps.folder')
   const fileId = (await get('drive:file:pulse-data.json')) as string | undefined
-  if (fileId) {
-    try {
-      const remote = await (await api(`${API}/files/${fileId}?alt=media`)).json()
-      st.patch({
-        expenses: merge(st.expenses, remote.expenses ?? []),
-        water: merge(st.water, remote.water ?? []),
-        wlogs: merge(st.wlogs, remote.wlogs ?? []),
-      })
-    } catch { /* first sync or deleted remotely: just push */ }
-  }
+  if (!fileId) return 'No backup found on this device yet'
+  const remote = await (await api(`${API}/files/${fileId}?alt=media`)).json()
+  const before = useStore.getState().expenses.length
+  // read state AFTER the download so anything added meanwhile is kept
+  const fresh = useStore.getState()
+  fresh.patch({
+    expenses: merge(fresh.expenses, remote.expenses ?? []),
+    water: merge(fresh.water, remote.water ?? []),
+    wlogs: merge(fresh.wlogs, remote.wlogs ?? []),
+  })
+  return `Restored ${useStore.getState().expenses.length - before} missing expenses`
+}
+
+/** One-way backup: the phone is the source of truth, Drive only ever receives a copy. */
+export async function syncNow(): Promise<string> {
+  const folder = await findOrCreate('Pulse', 'application/vnd.google-apps.folder')
   const cur = useStore.getState()
   const data = {
     expenses: cur.expenses, water: cur.water, wlogs: cur.wlogs,
@@ -135,28 +140,31 @@ export async function syncNow(): Promise<string> {
     const blob = (await get(`snd:${snd.id}`)) as File | undefined
     if (blob) await upsert(`sound-${snd.name}`, folder, blob, blob.type || 'audio/mpeg')
   }
-  st.patch({ lastSync: Date.now() })
+  useStore.getState().patch({ lastSync: Date.now() })
   setStatus('ok')
   return 'Synced to Drive/Pulse'
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined
 let running = false
+let dirty = false
 
 /** Quiet sync: never opens a Google popup, so it can fail silently when the session needs re-consent. */
 export async function quietSync() {
   if (running || !navigator.onLine || !clientIdOf() || !linked()) return
-  running = true; silent = true; setStatus('syncing')
+  running = true; silent = true; dirty = false; setStatus('syncing')
   try { await syncNow(); setStatus('ok') } catch { setStatus('error') }
   silent = false; running = false
+  if (dirty) { dirty = false; clearTimeout(timer); timer = setTimeout(quietSync, 1500) }
 }
 
 /** Syncs on app open, when the tab returns to view, when back online, and ~4s after any data or settings change. */
 export function autoSync() {
   const watched = ['expenses', 'water', 'wlogs', 'budgets', 'cats', 'workouts', 'reminders', 'lanes', 'blockSounds', 'customSounds', 'waterGoal', 'currency'] as const
   useStore.subscribe((s, p) => {
-    if (running || s.lastSync !== p.lastSync) return
+    if (s.lastSync !== p.lastSync) return
     if (watched.every((k) => s[k] === p[k])) return
+    if (running) { dirty = true; return }
     clearTimeout(timer)
     timer = setTimeout(quietSync, 4000)
   })
