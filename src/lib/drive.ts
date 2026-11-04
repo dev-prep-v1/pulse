@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval'
-import { useStore, type State } from '../store'
+import { useStore, repairExpenses, type State } from '../store'
 
 /* Google Drive sync.
    Uses Google Identity Services (token flow) with scope drive.file, so the app can only
@@ -119,7 +119,7 @@ export async function restoreFromDrive(): Promise<string> {
   // read state AFTER the download so anything added meanwhile is kept
   const fresh = useStore.getState()
   fresh.patch({
-    expenses: merge(fresh.expenses, remote.expenses ?? []),
+    expenses: repairExpenses(merge(fresh.expenses, remote.expenses ?? [])),
     water: merge(fresh.water, remote.water ?? []),
     wlogs: merge(fresh.wlogs, remote.wlogs ?? []),
   })

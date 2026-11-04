@@ -333,7 +333,8 @@ const wkStart = (ts: number) => { const d = new Date(sod(ts)); return new Date(d
 const addDays = (ts: number, n: number) => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime() }
 
 /* Days / weeks report. A month chip row narrows both views to one calendar month. */
-function Report({ expenses, cats, currency, onDelete, onRepeat }: {
+function Report({ expenses, cats, currency, onDelete, onRepeat, resetKey }: {
+  resetKey: number
   expenses: { id: string; amount: number; cat: string; note: string; ts: number }[]; cats: Cat[]; currency: string
   onDelete: (id: string) => void; onRepeat: (e: { amount: number; cat: string; note: string }) => void
 }) {
@@ -341,8 +342,10 @@ function Report({ expenses, cats, currency, onDelete, onRepeat }: {
   const [month, setMonth] = useState<number | null>(null) // month start ts, null = recent
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const [selDay, setSelDay] = useState(todayStart)
-  const [selWeek, setSelWeek] = useState(wkStart(todayStart))
+  // null = follow today, so the view never gets stuck on yesterday if the app stays open past midnight
+  const [selDay, setSelDay] = useState<number | null>(null)
+  const [selWeek, setSelWeek] = useState<number | null>(null)
+  useEffect(() => { setSelDay(null); setSelWeek(null); setMonth(null) }, [resetKey])
   const catOf = (id: string) => cats.find((c) => c.id === id) ?? { id, name: 'Other', icon: 'spark', color: '#999' }
   const money0 = (n: number) => currency + Math.round(n).toLocaleString('en-IN')
 
@@ -360,8 +363,8 @@ function Report({ expenses, cats, currency, onDelete, onRepeat }: {
   const weekTotal = (w: number) => { let s = 0; for (let i = 0; i < 7; i++) { const d = addDays(w, i); if (d >= rangeStart && d <= rangeEnd) s += byDay.get(d) ?? 0 } return s }
   const rangeTotal = days.reduce((a, d) => a + (byDay.get(d) ?? 0), 0)
 
-  const day = days.includes(selDay) ? selDay : days[days.length - 1]
-  const week = weeks.includes(selWeek) ? selWeek : weeks[weeks.length - 1]
+  const day = selDay !== null && days.includes(selDay) ? selDay : days[days.length - 1]
+  const week = selWeek !== null && weeks.includes(selWeek) ? selWeek : weeks[weeks.length - 1]
   const dayIdx = days.indexOf(day), weekIdx = weeks.indexOf(week)
   const dayEntries = expenses.filter((e) => sod(e.ts) === day).sort((a, b) => b.ts - a.ts)
   const weekEnd = addDays(week, 6)
@@ -417,7 +420,7 @@ function Report({ expenses, cats, currency, onDelete, onRepeat }: {
               <div style={{ fontSize: 20, fontWeight: 800 }}>{money0(rangeTotal)}</div>
             </div>
           </div>
-          <Strip vals={days.map((d) => byDay.get(d) ?? 0)} labels={dLabels} sel={dayIdx} onSel={(i) => setSelDay(days[i])} />
+          <Strip vals={days.map((d) => byDay.get(d) ?? 0)} labels={dLabels} sel={dayIdx} onSel={(i) => setSelDay(i === days.length - 1 ? null : days[i])} />
         </>) : (<>
           <div className="row" style={{ alignItems: 'flex-end' }}>
             <div key={week} className="rpop" style={{ minWidth: 0 }}>
@@ -430,7 +433,7 @@ function Report({ expenses, cats, currency, onDelete, onRepeat }: {
               <div style={{ fontSize: 20, fontWeight: 800 }}>{money0(weeks.reduce((a, w) => a + weekTotal(w), 0))}</div>
             </div>
           </div>
-          <Strip vals={weeks.map(weekTotal)} labels={wLabels} sel={weekIdx} onSel={(i) => setSelWeek(weeks[i])} />
+          <Strip vals={weeks.map(weekTotal)} labels={wLabels} sel={weekIdx} onSel={(i) => setSelWeek(i === weeks.length - 1 ? null : weeks[i])} />
         </>)}
       </div>
 
@@ -459,6 +462,7 @@ export default function Spend() {
   const [note, setNote] = useState('')
   const [step, setStep] = useState<1 | 2>(1)
   const [manage, setManage] = useState(false)
+  const [added, setAdded] = useState(0)
   const [typing, setTyping] = useState(false)
   const [dtext, setDtext] = useState('')
   const [date, setDate] = useState('') // yyyy-mm-dd, '' = today
@@ -507,6 +511,7 @@ export default function Spend() {
     const inMonth = ts === undefined || ts >= m0
     const isToday = ts === undefined || ts >= day0
     addExpense({ amount: amt, cat: c.id, note: note.trim(), ts })
+    setAdded((n) => n + 1)
     if (c.personal && limit !== undefined && inMonth) {
       const s = budgetStats(spentMonth + amt, spentToday + (isToday ? amt : 0), limit, daysLeft)
       setToast({ k: Date.now(), cat: c.name, amt, leftToday: s.leftToday, left: s.left, perDay: s.perDay })
@@ -614,7 +619,7 @@ export default function Spend() {
         </div>
       </motion.div>
 
-      <Report expenses={expenses} cats={cats} currency={currency} onDelete={delExpense} onRepeat={(e) => addExpense(e)} />
+      <Report expenses={expenses} cats={cats} currency={currency} onDelete={delExpense} onRepeat={(e) => addExpense(e)} resetKey={added} />
 
       <AnimatePresence>
         {toast && (

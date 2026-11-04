@@ -2,6 +2,10 @@ import { create } from 'zustand'
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
 import { get, set, del } from 'idb-keyval'
 
+/** Entries saved with a missing/invalid time (an old bug) get a valid one so they show up again. */
+export const repairExpenses = (list: Expense[]) =>
+  list.some((e) => !Number.isFinite(e.ts)) ? list.map((e, i) => (Number.isFinite(e.ts) ? e : { ...e, ts: Date.now() - i })) : list
+
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 
 export type Expense = { id: string; amount: number; cat: string; note: string; ts: number }
@@ -95,7 +99,7 @@ export const useStore = create<State>()(
       voiceOn: true, voice: '', voiceRate: 1,
       budgets: {},
       cats: DEFAULT_CATS, customSounds: [], blockSounds: DEFAULT_BLOCK_SOUNDS,
-      addExpense: (e) => setS((s) => ({ expenses: [{ id: uid(), ts: Date.now(), ...e }, ...s.expenses] })),
+      addExpense: (e) => setS((s) => ({ expenses: [{ id: uid(), ...e, ts: e.ts ?? Date.now() }, ...s.expenses] })),
       delExpense: (id) => setS((s) => ({ expenses: s.expenses.filter((x) => x.id !== id) })),
       addWater: (ml) => setS((s) => ({ water: [{ id: uid(), ml, ts: Date.now() }, ...s.water] })),
       delWater: (id) => setS((s) => ({ water: s.water.filter((x) => x.id !== id) })),
